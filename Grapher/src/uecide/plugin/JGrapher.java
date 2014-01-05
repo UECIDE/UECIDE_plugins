@@ -47,11 +47,13 @@ public class JGrapher extends JComponent
         String name;
         Color color;
         int numPoints;
+        int lineWidth;
         ArrayList<Float> values;
 
-        public DataSeries(String name, Color color, int numPoints) {
+        public DataSeries(String name, Color color, int numPoints, int width) {
             this.name = name;
             this.color = color;
+            this.lineWidth = width;
             this.numPoints = numPoints;
             this.values = new ArrayList<Float>();
             for (int i = 0; i < numPoints; i++) {
@@ -90,6 +92,10 @@ public class JGrapher extends JComponent
 
         public String getName() {
             return name;
+        }
+
+        public int getWidth() {
+            return lineWidth;
         }
     }
 
@@ -152,7 +158,6 @@ public class JGrapher extends JComponent
                 g.setTransform(orig);
             }
         }
-        g.setStroke(new BasicStroke(2));
 
         int ypos = 0;
         for (DataSeries s : series) {
@@ -160,6 +165,7 @@ public class JGrapher extends JComponent
 
             g.setColor(s.getColor());
             float oval = (vals[0] - axisY1Min) * scale;
+            g.setStroke(new BasicStroke(s.getWidth()));
 
             for (int x=1; x<numPoints; x++) {
                 float val = (vals[x] - axisY1Min) * scale;
@@ -262,8 +268,8 @@ public class JGrapher extends JComponent
         }
     }
 
-    public void addSeries(String name, Color color) {
-        series.add(new DataSeries(name, color, numPoints));
+    public void addSeries(String name, Color color, int width) {
+        series.add(new DataSeries(name, color, numPoints, width));
     }
 
     public void addDataPoint(float[] v) {

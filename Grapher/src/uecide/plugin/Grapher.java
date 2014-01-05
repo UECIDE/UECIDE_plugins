@@ -198,11 +198,25 @@ public class Grapher extends BasePlugin implements SerialPortEventListener
             switch(cmd) {
                 case 'A':
                     if(params.length == 4) {
-                        graph.addSeries(params[0], new Color(
-                            Integer.parseInt(params[1]),
-                            Integer.parseInt(params[2]),
-                            Integer.parseInt(params[3])
-                        ));
+                        graph.addSeries(
+                            params[0], 
+                            new Color(
+                                Integer.parseInt(params[1]),
+                                Integer.parseInt(params[2]),
+                                Integer.parseInt(params[3])
+                            ), 
+                            2
+                        );
+                    } else if(params.length == 5) {
+                        graph.addSeries(
+                            params[0], 
+                            new Color(
+                                Integer.parseInt(params[1]),
+                                Integer.parseInt(params[2]),
+                                Integer.parseInt(params[3])
+                            ),
+                            Integer.parseInt(params[4])
+                        );
                     }
                     break;
                 case 'V':
