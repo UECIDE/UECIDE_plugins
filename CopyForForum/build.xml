@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <project name="CopyForForum" default="build">
   <property file="build.settings"/>
+  <property file="../build.settings"/>
     <tstamp>
         <format property="TODAY" pattern="yyyyMMdd" />
     </tstamp>
