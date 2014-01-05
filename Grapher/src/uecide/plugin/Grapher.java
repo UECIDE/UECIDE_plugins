@@ -23,7 +23,7 @@ public class Grapher extends BasePlugin implements SerialPortEventListener
     JFrame win;
     JGrapher graph;
     SerialPort port;
-    JComboBox<String> baudRates;
+    JComboBox baudRates;
     JScrollBar scrollbackBar;
 
     JButton playPauseButton;
@@ -105,7 +105,7 @@ public class Grapher extends BasePlugin implements SerialPortEventListener
         JLabel label = new JLabel(Translate.t("Baud Rate") + ": ");
         line.add(label);
         String[] baudRateList = new String[] { "300", "1200", "2400", "4800", "9600", "14400", "28800", "38400", "57600", "115200", "230400", "460800", "500000", "576000", "1000000", "1152000"};
-        baudRates = new JComboBox<String>(baudRateList);
+        baudRates = new JComboBox(baudRateList);
         final SerialPortEventListener mc = this;
         baudRates.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent event) {

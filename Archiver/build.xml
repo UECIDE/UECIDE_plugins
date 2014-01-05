@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<project name="Arduino PDE" default="build">
+<project name="Sketch Archiver Plugin" default="build">
   <property file="build.settings"/>
   <property file="../build.settings"/>
     <tstamp>
@@ -31,6 +31,7 @@
            source="1.6"
            srcdir="src" 
 	       destdir="bin" 
+           bootclasspath="${bootclass.path}"
 	       includeAntRuntime="false"
 	       classpath="${uecide.path}/core/uecide.jar; ${env.JAVA_HOME}/lib/tools.jar; lib/ant.jar; lib/ant-launcher.jar; lib/apple.jar; lib/ecj.jar; lib/jna.jar; lib/jssc.jar" />
     </target>
