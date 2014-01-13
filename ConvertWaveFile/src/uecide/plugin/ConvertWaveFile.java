@@ -44,7 +44,7 @@ public class ConvertWaveFile extends BasePlugin {
 
     public void init(Editor editor) {
         this.editor = editor;
-        win = new JFrame("Convert WAV File");
+        win = new JFrame(Translate.t("plugin.convwav.name"));
         win.getContentPane().setLayout(new BorderLayout());
         win.setResizable(true);
 
@@ -55,8 +55,8 @@ public class ConvertWaveFile extends BasePlugin {
 
 
         Box line = Box.createHorizontalBox();
-        inFileLabel = new JLabel("WAV File: ");
-        inFileName = new JLabel("None Selected");
+        inFileLabel = new JLabel(Translate.c("plugin.convwav.wavfile"));
+        inFileName = new JLabel(Translate.t("plugin.convwav.none"));
 
         inFileName.setPreferredSize(new Dimension(400, 20));
         inFileName.setMinimumSize(new Dimension(400, 20));
@@ -90,9 +90,9 @@ public class ConvertWaveFile extends BasePlugin {
         box.add(line);
 
         line = Box.createHorizontalBox();
-        merge = new JCheckBox("Merge to Mono     ");
+        merge = new JCheckBox(Translate.t("plugin.convwav.mod.mono"));
         line.add(merge);
-        resample = new JCheckBox("Resample to");
+        resample = new JCheckBox(Translate.t("plugin.convwav.mod.resample"));
         line.add(resample);
         rates = new JComboBox(new String[] {
             "8000", "11025", "16000", "22050", "32000", "44100"
@@ -110,7 +110,7 @@ public class ConvertWaveFile extends BasePlugin {
         box.add(line);
 
         line = Box.createHorizontalBox();
-        newFilenameLabel = new JLabel("New Filename: ");
+        newFilenameLabel = new JLabel(Translate.c("plugin.convwav.new"));
         line.add(newFilenameLabel);
         newFilename = new JTextArea("");
 
@@ -123,7 +123,7 @@ public class ConvertWaveFile extends BasePlugin {
         newFilenameSuffix = new JLabel(".h         ");
         line.add(newFilenameSuffix);
 
-        convertButton = new JButton("Convert");
+        convertButton = new JButton(Translate.t("plugin.convwav.convert"));
         convertButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e)
             {
@@ -163,7 +163,7 @@ public class ConvertWaveFile extends BasePlugin {
     {
         // get the frontmost window frame for placing file dialog
         FileDialog fd = new FileDialog(this.editor,
-            "Open WAV File",
+            Translate.t("plugin.convwav.open"),
             FileDialog.LOAD);
 
         fd.setFilenameFilter(new FilenameFilter() {
@@ -188,7 +188,7 @@ public class ConvertWaveFile extends BasePlugin {
         try {
             wav = WavFile.openWavFile(inFile);
             inFileName.setText(inFile.getAbsolutePath());
-            info.setText("Channels: " + wav.getNumChannels() + ", " + wav.getSampleRate() + "Hz");
+            info.setText(Translate.c("plugin.convwav.channels") + wav.getNumChannels() + ", " + wav.getSampleRate() + "Hz");
             merge.setSelected(wav.getNumChannels() == 2);
             String newname = inFile.getName();
             newname = newname.toLowerCase();
@@ -204,7 +204,7 @@ public class ConvertWaveFile extends BasePlugin {
     }
 
     public String getMenuTitle() {
-        return "Convert WAV file";
+        return Translate.t("plugin.convwav.name");
     }
 
     public void run() {
@@ -241,7 +241,7 @@ public class ConvertWaveFile extends BasePlugin {
 
                 long numSamples = 0;
 
-                editor.status.progress("Converting...");
+                editor.status.progress(Translate.e("plugin.convwav.converting"));
                 long totSamples = wav.getNumFrames();
 
                 StringBuilder newText = new StringBuilder();
@@ -273,11 +273,11 @@ public class ConvertWaveFile extends BasePlugin {
                 pw.print(newText.toString());
                 pw.close();
                 editor.addTab(newFile);
-                editor.status.progressNotice("Converted");
+                editor.status.progressNotice(Translate.t("plugin.convwav.converted"));
                 editor.status.unprogress();
                 win.setVisible(false);
             } catch (Exception e) {
-                System.err.println("Convert Error: " + e);
+                System.err.println(Translate.c("plugin.convwav.error") + e);
             }
         }
     }

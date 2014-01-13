@@ -43,7 +43,7 @@ public class Archiver extends BasePlugin {
   SimpleDateFormat dateFormat;
 
   public String getMenuTitle() {
-    return "Archive Sketch";
+    return Translate.t("plugin.archiver.name");
   }
   
   public void init(Editor editor) {
@@ -67,9 +67,9 @@ public class Archiver extends BasePlugin {
       Base.error(e);
     }
     if (!success) {
-      Base.showWarning("Couldn't archive sketch",
-                       "Archiving the sketch has been canceled because\n" +
-                       "the sketch couldn't save properly.", null);
+      Base.showWarning(Translate.t("plugin.archiver.fail.title"),
+                       Translate.w("plugin.archiver.fail.nosave", 30, "\n"),
+                       null);
       return;
     }
 
@@ -103,7 +103,7 @@ public class Archiver extends BasePlugin {
 
     // open up a prompt for where to save this fella
     FileDialog fd =
-      new FileDialog(editor, "Archive sketch as:", FileDialog.SAVE);
+      new FileDialog(editor, Translate.c("plugin.archiver.prompt"), FileDialog.SAVE);
     fd.setDirectory(parent.getAbsolutePath());
     fd.setFile(newbie.getName());
     fd.setVisible(true);
@@ -127,13 +127,13 @@ public class Archiver extends BasePlugin {
         zos.flush();
         zos.close();
 
-        editor.statusNotice("Created archive " + newbie.getName() + ".");
+        editor.statusNotice(Translate.t("plugin.archiver.created", newbie.getName()));
 
       } catch (IOException e) {
         Base.error(e);
       }
     } else {
-      editor.statusNotice("Archive sketch canceled.");
+      editor.statusNotice(Translate.t("plugin.archiver.fail.title"));
     }
   }
 

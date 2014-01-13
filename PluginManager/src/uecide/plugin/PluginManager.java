@@ -49,7 +49,7 @@ public class PluginManager extends BasePlugin
 
     public void run()
     {
-        win = new JFrame(Translate.t("Plugin Manager"));
+        win = new JFrame(Translate.t("plugin.manager.name"));
         win.getContentPane().setLayout(new BorderLayout());
         win.setResizable(false);
 
@@ -61,7 +61,7 @@ public class PluginManager extends BasePlugin
         populate();
 
         Box line = Box.createHorizontalBox();
-        upgradeAllButton = new JButton(Translate.t("Upgrade All"));
+        upgradeAllButton = new JButton(Translate.t("plugin.manager.upgrade"));
         upgradeAllButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 upgradeAll();
@@ -69,7 +69,7 @@ public class PluginManager extends BasePlugin
         });
         line.add(upgradeAllButton);
 
-        refreshButton = new JButton(Translate.t("Refresh"));
+        refreshButton = new JButton(Translate.t("plugin.manager.refresh"));
         refreshButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 updatePlugins();
@@ -112,7 +112,7 @@ public class PluginManager extends BasePlugin
     public void populate() {
         body.removeAll();
 
-        DefaultMutableTreeNode top = new DefaultMutableTreeNode(Translate.t("Updating..."));
+        DefaultMutableTreeNode top = new DefaultMutableTreeNode(Translate.e("plugin.manager.updating"));
         final JTree root = new JTree(top);
         root.setVisibleRowCount(15);
         scroll = new JScrollPane(root);
@@ -129,7 +129,7 @@ public class PluginManager extends BasePlugin
 
         // ---- Plugins ---- //
 
-        DefaultMutableTreeNode pluginRoot = new DefaultMutableTreeNode(Translate.t("Plugins"));
+        DefaultMutableTreeNode pluginRoot = new DefaultMutableTreeNode(Translate.t("plugin.manager.plugins"));
         top.add(pluginRoot);
 
         for (String entry : PluginManager.availablePlugins.keySet().toArray(new String[0])) {
@@ -143,7 +143,7 @@ public class PluginManager extends BasePlugin
 
         // ---- Boards ---- //
 
-        DefaultMutableTreeNode boardRoot = new DefaultMutableTreeNode(Translate.t("Boards"));
+        DefaultMutableTreeNode boardRoot = new DefaultMutableTreeNode(Translate.t("plugin.manager.boards"));
         top.add(boardRoot);
         String[] entries = PluginManager.availableBoards.keySet().toArray(new String[0]);
 
@@ -214,7 +214,7 @@ public class PluginManager extends BasePlugin
 
         // ---- Cores ---- //
 
-        DefaultMutableTreeNode coreRoot = new DefaultMutableTreeNode(Translate.t("Cores"));
+        DefaultMutableTreeNode coreRoot = new DefaultMutableTreeNode(Translate.t("plugin.manager.cores"));
         top.add(coreRoot);
         entries = PluginManager.availableCores.keySet().toArray(new String[0]);
 
@@ -246,7 +246,7 @@ public class PluginManager extends BasePlugin
 
         // ---- Compilers ---- //
 
-        DefaultMutableTreeNode compilerRoot = new DefaultMutableTreeNode(Translate.t("Compilers"));
+        DefaultMutableTreeNode compilerRoot = new DefaultMutableTreeNode(Translate.t("plugin.manager.compilers"));
         top.add(compilerRoot);
 
         for (String entry : PluginManager.availableCompilers.keySet().toArray(new String[0])) {
@@ -281,11 +281,11 @@ public class PluginManager extends BasePlugin
                         JLabel l = new JLabel(pe.getDescription());
                         infoPanel.add(l, BorderLayout.NORTH);
                         if (pe.isOutdated() || pe.isNewer()) {
-                            l = new JLabel("Installed: " + pe.getInstalledVersion() + " Available: " + pe.getAvailableVersion());
+                            l = new JLabel(Translate.c("plugin.manager.installed") + pe.getInstalledVersion() + " " + Translate.c("plugin.manager.available") + pe.getAvailableVersion());
                         } else if (pe.isInstalled()) {
-                            l = new JLabel("Installed: " + pe.getInstalledVersion());
+                            l = new JLabel(Translate.c("plugin.manager.installed") + pe.getInstalledVersion());
                         } else {
-                            l = new JLabel("Available: " + pe.getAvailableVersion());
+                            l = new JLabel(Translate.c("plugin.manager.available") + pe.getAvailableVersion());
                         }
                         infoPanel.add(l, BorderLayout.SOUTH);
                         infoPanel.add(pe, BorderLayout.CENTER);
@@ -430,7 +430,7 @@ public class PluginManager extends BasePlugin
     {
         cancelDownloads();
         if (isDownloading()) {
-            Base.showWarning("Downloading", "You have active downloads.\nYou may not close", null);
+            Base.showWarning(Translate.t("plugin.manager.downloading"), Translate.w("plugin.manager.noclose", 30, "\n"), null);
             return;
         }
         win.dispose();
@@ -444,7 +444,7 @@ public class PluginManager extends BasePlugin
 
     public String getMenuTitle()
     {
-        return(Translate.t("Plugin Manager"));
+        return(Translate.t("plugin.manager.name"));
     }
 
     public void message(String m) {
@@ -470,10 +470,10 @@ public class PluginManager extends BasePlugin
                     data = in.readLine();
                     in.close();
                 } catch (UnknownHostException e) {
-                    Base.showWarning(Translate.t("Update Failed"), Translate.w("The update failed because I could not find the host %1", 40, "\n", e.getMessage()), e);
+                    Base.showWarning(Translate.t("plugin.manager.update.fail"), Translate.w("plugin.manager.update.badhost", 40, "\n", e.getMessage()), e);
                     return null;
                 } catch (Exception e) {
-                    Base.showWarning(Translate.t("Update Failed"), Translate.w("An unknown error occurred: %1", 40, "\n", e.toString()), e);
+                    Base.showWarning(Translate.t("plugin.manager.update.fail"), Translate.w("plugin.manager.update.unknown", 40, "\n", e.toString()), e);
                     return null;
                 }
 
@@ -631,25 +631,25 @@ public class PluginManager extends BasePlugin
             win.pack();
 
             if (!isOutdated() && !isInstalled() && !isNewer()) {
-                button = new JButton("Install");
+                button = new JButton(Translate.t("plugin.manager.install"));
                 button.addActionListener(this);
                 button.setActionCommand("install");
                 this.add(button);
             } else if (isInstalled()) {
-                label = new JLabel("Installed");
+                label = new JLabel(Translate.t("plugin.manager.installed"));
                 this.add(label);
             } else if (isNewer()) {
-                label = new JLabel("Test Version");
+                label = new JLabel(Translate.t("plugin.manager.test"));
                 this.add(label);
             } else if (isOutdated()) {
-                button = new JButton("Upgrade");
+                button = new JButton(Translate.t("plugin.manager.upgrade"));
                 button.addActionListener(this);
                 button.setActionCommand("upgrade");
                 this.add(button);
             }
 
             if (isOutdated() || isInstalled() || isNewer()) {
-                button = new JButton("Uninstall");
+                button = new JButton(Translate.t("plugin.manager.uninstall"));
                 button.addActionListener(this);
                 button.setActionCommand("uninstall");
                 this.add(button);
@@ -743,7 +743,7 @@ public class PluginManager extends BasePlugin
         public void uninstall() {
             if (type == PLUGIN) {
                 if (mainClass.equals(PluginManager.this.getClass().getName())) {
-                    Base.showWarning(Translate.t("Unable To Uninstall"), Translate.w("If you uninstall the Plugin Manager you won't be able to install any new plugins. That would be a bit silly, don't you think? I'm not going to let you do it.", 40, "\n"), null);
+                    Base.showWarning(Translate.t("plugin.manager.nouninstall"), Translate.w("plugin.manager.willnot", 40, "\n"), null);
                     return;
                 }
                 Plugin p = Base.plugins.get(mainClass);
@@ -817,7 +817,7 @@ public class PluginManager extends BasePlugin
             win.pack();
             bar = new JProgressBar(0, 100);
 
-            System.err.println("Downloading " + name);
+            System.err.println(Translate.t("plugin.manager.downloading") + " " + name);
 
             if (type == CORE) {
                 if (Base.compilers.get((String)data.get("Compiler")) == null) {
@@ -826,7 +826,7 @@ public class PluginManager extends BasePlugin
                         isQueued = true;
                         pe.startDownload(this);
                         bar.setIndeterminate(false);
-                        bar.setString("Installing Compiler...");
+                        bar.setString(Translate.e("plugin.manager.installing.compiler"));
                         bar.setStringPainted(true);
                         this.add(bar);
                         repaint();
@@ -834,12 +834,12 @@ public class PluginManager extends BasePlugin
                         win.pack();
                         return;
                     } else {
-                        Base.showWarning(Translate.t("Unable to install"), Translate.w("That core cannot be installed right now. You do not have the compiler installed, and I cannot find the compiler in my list of packages. Try refreshing the list and trying again.", 40, "\n"), null);
+                        Base.showWarning(Translate.t("plugin.manager.noinstall"), Translate.w("plugin.manager.nocompiler", 40, "\n"), null);
                         return;
                     }
                 }
             }
-            bar.setString("Downloading");
+            bar.setString(Translate.t("plugin.manager.downloading"));
             bar.setStringPainted(true);
             bar.setIndeterminate(false);
             this.add(bar);
@@ -884,11 +884,6 @@ public class PluginManager extends BasePlugin
                 URL page = new URL(url);
                 HttpURLConnection httpConn = (HttpURLConnection) page.openConnection();
                 final long contentLength = httpConn.getContentLength();
-                if (contentLength == -1) {
-                    System.out.println("unknown content length");
-                } else {
-                    System.out.println("content length: " + contentLength + " bytes");              
-                }
                 final InputStream in = httpConn.getInputStream();
                 final BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(dest));
 
@@ -907,7 +902,7 @@ public class PluginManager extends BasePlugin
                                 out.write(buffer, 0, n);
                             }
                         } catch (Exception ex) {
-                            Base.showWarning(Translate.t("Download Failed"), Translate.w("The download failed at point 1 because %1", 40, "\n", ex.toString()), ex);
+                            Base.showWarning(Translate.t("plugin.manager.download.failed"), Translate.w("plugin.manager.download.reason", 40, "\n", ex.toString()), ex);
                             isDownloading = false;
                         }
                         return null;
@@ -919,7 +914,7 @@ public class PluginManager extends BasePlugin
                             in.close();
                             out.close();
                         } catch (Exception ex) {
-                            Base.showWarning(Translate.t("Download Failed"), Translate.w("The download failed at point 2 because %1", 40, "\n", ex.toString()), ex);
+                            Base.showWarning(Translate.t("plugin.manager.download.failed"), Translate.w("plugin.manager.download.reason", 40, "\n", ex.toString()), ex);
                             isDownloading = false;
                             return;
                         }
@@ -937,13 +932,13 @@ public class PluginManager extends BasePlugin
                 downloader.execute();
             } catch (Exception e) {
                 Base.error(e);
-                Base.showWarning(Translate.t("Download Failed"), Translate.w("The download failed at point 3 because %1", 40, "\n", e.toString()), e);
+                Base.showWarning(Translate.t("plugin.manager.download.failed"), Translate.w("plugin.manager.download.reason", 40, "\n", e.toString()), e);
                 isDownloading = false;
             }
         }
 
         public void install() {
-            bar.setString("Installing");
+            bar.setString(Translate.t("plugin.manager.installing"));
             setProgress(0);
 
             if (type == PLUGIN) {
@@ -954,7 +949,7 @@ public class PluginManager extends BasePlugin
                     setInstalled();
                 } catch (Exception e) {
                     Base.error(e);
-                    Base.showWarning(Translate.t("Install Failed"), Translate.w("The install failed because %1", 40, "\n", e.toString()), e);
+                    Base.showWarning(Translate.t("plugin.manager.install.failed"), Translate.w("plugin.manager.install.reason", 40, "\n", e.toString()), e);
                 }
             }
 
@@ -1033,7 +1028,7 @@ public class PluginManager extends BasePlugin
             pi.setMax((long)files);
             if (files == -1) {
                 System.err.println("Zip file empty");
-                Base.showWarning(Translate.t("Install Failed"), Translate.w("The install failed: The jar file has no entries.", 40, "\n"), null);
+                Base.showWarning(Translate.t("plugin.manager.install.failed"), Translate.w("plugin.manager.install.reason", 40, "\n"), null);
                 return null;
             }
             int done = 0;
@@ -1067,7 +1062,7 @@ public class PluginManager extends BasePlugin
                 zis.close();
             } catch (Exception e) {
                 Base.error(e);
-                Base.showWarning(Translate.t("Install Failed"), Translate.w("The install failed because %1", 40, "\n", e.toString()), e);
+                Base.showWarning(Translate.t("plugin.manager.install.failed"), Translate.w("plugin.manager.install.reason", 40, "\n", e.toString()), e);
                 return null;
             }
             return null;

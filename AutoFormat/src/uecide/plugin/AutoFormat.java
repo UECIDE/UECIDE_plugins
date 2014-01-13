@@ -56,7 +56,7 @@ public class AutoFormat extends BasePlugin {
   String line_feed;
   
   public String getMenuTitle() {
-    return "Auto Format";
+    return Translate.t("plugin.autoformat.name");
   }
 
   public void comment() throws IOException {
@@ -878,18 +878,16 @@ public class AutoFormat extends BasePlugin {
 
       String formattedText = strOut.toString();
       if (formattedText.equals(originalText)) {
-        editor.statusNotice("No changes necessary for Auto Format.");
+        editor.statusNotice(Translate.t("plugin.autoformat.nochange"));
 
       } else if (paren != 0) {
         // warn user if there are too many parens in either direction
-        editor.statusError("Auto Format Canceled: Too many " +
-                     ((paren < 0) ? "right" : "left") +
-                     " parentheses.");
+        editor.statusError(Translate.t("plugin.autoformat.toomany.paren", 
+                    ((paren < 0) ? "right" : "left")));
 
       } else if (c_level != 0) {  // check braces only if parens are ok
-        editor.statusError("Auto Format Canceled: Too many " +
-                     ((c_level < 0) ? "right" : "left") +
-                     " curly braces.");
+        editor.statusError(Translate.t("plugin.autoformat.toomany.brace",
+                     ((c_level < 0) ? "right" : "left")));
 
       } else {
         // replace with new bootiful text
@@ -897,7 +895,7 @@ public class AutoFormat extends BasePlugin {
         editor.setText(formattedText);
         editor.setSelection(selectionEnd, selectionEnd);
         // mark as finished
-        editor.statusNotice("Auto Format finished.");
+        editor.statusNotice(Translate.t("plugin.autoformat.finished"));
       }
 
     } catch (Exception e) {
