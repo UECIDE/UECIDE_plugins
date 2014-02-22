@@ -49,4 +49,8 @@
         <jar basedir="src" destfile="${plugin.name}.jar" includes="uecide/plugin/${plugin.name}/**" update="true"/>
 
     </target>
+
+    <target name="install" depends="build">
+        <copy file="PluginManager.jar" todir="${user.home}/.uecide/plugins" />
+    </target>
 </project>
