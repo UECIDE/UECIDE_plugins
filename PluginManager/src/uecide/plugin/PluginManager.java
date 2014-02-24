@@ -36,6 +36,8 @@ public class PluginManager extends BasePlugin
     public HashMap<String, PluginEntry> boardObjects = new HashMap<String, PluginEntry>();
     public HashMap<String, PluginEntry> compilerObjects = new HashMap<String, PluginEntry>();
 
+    public static HashMap<String, String> familyNames = new HashMap<String, String>();
+
     DefaultMutableTreeNode rootNode;
     DefaultTreeModel treeModel;
     JTree tree;
@@ -248,7 +250,11 @@ public class PluginManager extends BasePlugin
             String famarr[] = family.split(",");
             for (String fam : famarr) {
                 if (families.get(fam) == null) {
-                    families.put(fam, new DefaultMutableTreeNode(fam));
+                    String fname = PluginManager.familyNames.get(fam);
+                    if (fname == null) {
+                        fname = fam;
+                    }
+                    families.put(fam, new DefaultMutableTreeNode(fname));
                 }
             }
         }
@@ -260,7 +266,11 @@ public class PluginManager extends BasePlugin
             String famarr[] = family.split(",");
             for (String fam : famarr) {
                 if (families.get(fam) == null) {
-                    families.put(fam, new DefaultMutableTreeNode(fam));
+                    String fname = PluginManager.familyNames.get(fam);
+                    if (fname == null) {
+                        fname = fam;
+                    }
+                    families.put(fam, new DefaultMutableTreeNode(fname));
                 }
             }
         }
@@ -272,7 +282,11 @@ public class PluginManager extends BasePlugin
             String famarr[] = family.split(",");
             for (String fam : famarr) {
                 if (families.get(fam) == null) {
-                    families.put(fam, new DefaultMutableTreeNode(fam));
+                    String fname = PluginManager.familyNames.get(fam);
+                    if (fname == null) {
+                        fname = fam;
+                    }
+                    families.put(fam, new DefaultMutableTreeNode(fname));
                 }
             }
         }
@@ -465,25 +479,25 @@ public class PluginManager extends BasePlugin
     public boolean isDownloading() {
         boolean isDownloading = false;
 
-        for (String e : pluginObjects.keySet().toArray(new String[0])) {
+        for (String e : pluginObjects.keySet()) {
             if (pluginObjects.get(e).isDownloading()) {
                 isDownloading = true;
             }
         }
 
-        for (String e : boardObjects.keySet().toArray(new String[0])) {
+        for (String e : boardObjects.keySet()) {
             if (boardObjects.get(e).isDownloading()) {
                 isDownloading = true;
             }
         }
 
-        for (String e : coreObjects.keySet().toArray(new String[0])) {
+        for (String e : coreObjects.keySet()) {
             if (coreObjects.get(e).isDownloading()) {
                 isDownloading = true;
             }
         }
 
-        for (String e : compilerObjects.keySet().toArray(new String[0])) {
+        for (String e : compilerObjects.keySet()) {
             if (compilerObjects.get(e).isDownloading()) {
                 isDownloading = true;
             }
@@ -514,9 +528,39 @@ public class PluginManager extends BasePlugin
 
     public void close()
     {
-        cancelDownloads();
+//        cancelDownloads();
         if (isDownloading()) {
-            Base.showWarning("Downloading", "You have active downloads.\nYou may not close", null);
+            String downloads = "";
+            for (String e : pluginObjects.keySet()) {
+                if (pluginObjects.get(e).isDownloading()) {
+                    if (!downloads.equals("")) downloads += ", ";
+                    downloads += pluginObjects.get(e).getDisplayName();
+                }
+            }
+
+            for (String e : boardObjects.keySet()) {
+                if (boardObjects.get(e).isDownloading()) {
+                    if (!downloads.equals("")) downloads += ", ";
+                    downloads += boardObjects.get(e).getDisplayName();
+                }
+            }
+
+            for (String e : coreObjects.keySet()) {
+                if (coreObjects.get(e).isDownloading()) {
+                    if (!downloads.equals("")) downloads += ", ";
+                    downloads += coreObjects.get(e).getDisplayName();
+                }
+            }
+
+            for (String e : compilerObjects.keySet()) {
+                if (compilerObjects.get(e).isDownloading()) {
+                    if (!downloads.equals("")) downloads += ", ";
+                    downloads += compilerObjects.get(e).getDisplayName();
+                }
+            }
+
+
+            Base.showWarning(Translate.t("Downloading in progress"), Translate.w("You have active downloads at the moment.  You must wait for them to finish before you close this window.\nDownloads: %1", 40, "\n", downloads), null);
             return;
         }
         win.dispose();
@@ -564,6 +608,16 @@ public class PluginManager extends BasePlugin
                     return null;
                 }
 
+                availablePlugins = new HashMap<String, JSONObject>();
+                availableCores = new HashMap<String, JSONObject>();
+                availableBoards = new HashMap<String, JSONObject>();
+                availableCompilers = new HashMap<String, JSONObject>();
+
+                pluginObjects = new HashMap<String, PluginEntry>();
+                coreObjects = new HashMap<String, PluginEntry>();
+                boardObjects = new HashMap<String, PluginEntry>();
+                compilerObjects = new HashMap<String, PluginEntry>();
+
                 JSONObject ob = (JSONObject)JSONValue.parse(data);
                 try {
                     JSONObject plugins = (JSONObject)ob.get("plugins");
@@ -581,6 +635,14 @@ public class PluginManager extends BasePlugin
                     JSONObject compilers = (JSONObject)ob.get("compilers");
                     PluginManager.availableCompilers.putAll(compilers);
                 } catch (Exception ignored) {}
+
+                try {
+                    JSONObject fams = (JSONObject)ob.get("families");
+                    PluginManager.familyNames.putAll(fams);
+                } catch (Exception ignored) {
+                    ignored.printStackTrace();
+                }
+                 
                 populate();
                 refreshButton.setEnabled(true);
                 return null;
@@ -790,6 +852,10 @@ public class PluginManager extends BasePlugin
             return getDisplayName();
         }
 
+        public String getName() {
+            return name;
+        }
+
         public String getDisplayName() {
             switch (type) {
                 case 1:
@@ -824,7 +890,61 @@ public class PluginManager extends BasePlugin
 
         public void actionPerformed(ActionEvent e) {
             String command = e.getActionCommand();
+            button.setEnabled(false);
             if (command.equals("install") || command.equals("upgrade")) {
+
+                if (type == BOARD) {
+                    String recommendedCore = (String)data.get("Core");
+                    if (recommendedCore != null) {
+                        PluginEntry recommendedCoreObject = null;
+
+                        for (String ent : coreObjects.keySet()) {
+                            PluginEntry pent = coreObjects.get(ent);
+                            if (pent.getName().equals(recommendedCore)) {
+                                recommendedCoreObject = pent;
+                            }
+                        }
+                        if (recommendedCoreObject != null) {
+                            if (!(recommendedCoreObject.isInstalled() || recommendedCoreObject.isDownloading())) {
+                                int n = JOptionPane.showConfirmDialog(
+                                    win,
+                                    Translate.w("%1 recommends you use the %2 core, which you do not have installed.  Do you want to install %2?", 40, "\n", this.getDisplayName(), recommendedCoreObject.toString()),
+                                    Translate.t("Recommended core not installed"),
+                                    JOptionPane.YES_NO_OPTION
+                                );
+                                if (n == JOptionPane.YES_OPTION) {
+                                    recommendedCoreObject.actionPerformed(e);
+                                }
+                            }
+                        }
+                    }
+                } else if (type == CORE) {
+                    String recommendedCompiler = (String)data.get("Compiler");
+                    if (recommendedCompiler != null) {
+                        PluginEntry recommendedCompilerObject = null;
+
+                        for (String ent : compilerObjects.keySet()) {
+                            PluginEntry pent = compilerObjects.get(ent);
+                            if (pent.getName().equals(recommendedCompiler)) {
+                                recommendedCompilerObject = pent;
+                            }
+                        }
+                        if (recommendedCompilerObject != null) {
+                            if (!(recommendedCompilerObject.isInstalled() || recommendedCompilerObject.isDownloading())) {
+                                int n = JOptionPane.showConfirmDialog(
+                                    win,
+                                    Translate.w("%1 recommends you use the %2 compiler, which you do not have installed.  Do you want to install %2?", 40, "\n", this.getDisplayName(), recommendedCompilerObject.toString()),
+                                    Translate.t("Recommended compiler not installed"),
+                                    JOptionPane.YES_NO_OPTION
+                                );
+                                if (n == JOptionPane.YES_OPTION) {
+                                    recommendedCompilerObject.actionPerformed(e);
+                                }
+                            }
+                        }
+                    }
+                }
+
                 startDownload();
             }
             if (command.equals("uninstall")) {
