@@ -38,6 +38,11 @@ public class PluginManager extends BasePlugin
 
     public static HashMap<String, String> familyNames = new HashMap<String, String>();
 
+    public static final int PLUGIN = 1;
+    public static final int CORE = 2;
+    public static final int BOARD = 3;
+    public static final int COMPILER = 4;
+
     DefaultMutableTreeNode rootNode;
     DefaultTreeModel treeModel;
     JTree tree;
@@ -224,7 +229,10 @@ public class PluginManager extends BasePlugin
 
         for (String entry : PluginManager.availablePlugins.keySet().toArray(new String[0])) {
             JSONObject plugin = PluginManager.availablePlugins.get(entry);
-            PluginEntry pe = new PluginEntry(plugin, 1);
+            PluginEntry pe = pluginObjects.get(entry);
+            if (pe == null) {
+                pe = new PluginEntry(plugin, 1);
+            }
 
             TreePath searchPath = findTreeNode(new TreePath(treeModel.getRoot()), new Object[] {"root", Translate.t("Plugins"), pe}, 0, true);
             DefaultMutableTreeNode thisNode;
@@ -349,7 +357,10 @@ public class PluginManager extends BasePlugin
                 });
                 for (String board : validBoards) {
                     JSONObject plugin = PluginManager.availableBoards.get(board);
-                    PluginEntry pe = new PluginEntry(plugin, 3);
+                    PluginEntry pe = boardObjects.get(board);
+                    if (pe == null) {
+                        pe = new PluginEntry(plugin, 3);
+                    }
                     DefaultMutableTreeNode brdNode = new DefaultMutableTreeNode(pe);
                     brdNode.setUserObject(pe);
                     grpNode.add(brdNode);
@@ -367,7 +378,10 @@ public class PluginManager extends BasePlugin
                 for (String ef : efs) {
                     if (f.equals(ef)) {
                         JSONObject plugin1 = PluginManager.availableCores.get(entry);
-                        PluginEntry pe = new PluginEntry(plugin1, 2);
+                        PluginEntry pe = coreObjects.get(entry);
+                        if (pe == null) {
+                            pe = new PluginEntry(plugin1, 2);
+                        }
                         DefaultMutableTreeNode brdNode = new DefaultMutableTreeNode(pe);
                         brdNode.setUserObject(pe);
                         coreRoot.add(brdNode);
@@ -387,7 +401,10 @@ public class PluginManager extends BasePlugin
                 String efs[] = eFam.split(",");
                 for (String ef : efs) {
                     if (f.equals(ef)) {
-                        PluginEntry pe = new PluginEntry(plugin, 4);
+                        PluginEntry pe = compilerObjects.get(entry);
+                        if (pe == null) {
+                            pe = new PluginEntry(plugin, 4);
+                        }
                         DefaultMutableTreeNode brdNode = new DefaultMutableTreeNode(pe);
                         brdNode.setUserObject(pe);
                         compilerRoot.add(brdNode);
@@ -438,8 +455,8 @@ public class PluginManager extends BasePlugin
                 name.setText(text);
                 if (pe.isDownloading()) {
                     name.setIcon(downloading);
-                } else if (pe.isQueued()) {
-                    name.setIcon(queued);
+//                } else if (pe.isQueued()) {
+//                    name.setIcon(queued);
                 } else if (pe.isNewer()) {
                     name.setIcon(newer);
                 } else if (pe.isOutdated()) {
@@ -701,29 +718,23 @@ public class PluginManager extends BasePlugin
 
     }
 
-
     public class PluginEntry extends JPanel implements ActionListener {
-        String name;
-        String installedVersion;
-        String availableVersion;
-        String url;
+        public String name;
+        public String installedVersion;
+        public String availableVersion;
+        public String url;
         JButton button;
         JLabel label;
         JProgressBar bar;
-        int type;
+        public int type;
         File dest;
-        String mainClass;
-        JSONObject data;
-        boolean isDownloading = false;
-        boolean isQueued = false;
+        public String mainClass;
+        public JSONObject data;
+        public boolean isDownloading = false;
 
         SwingWorker<Void, Long> downloader = null;
         ZipExtractor installer = null;
 
-        public int PLUGIN = 1;
-        public int CORE = 2;
-        public int BOARD = 3;
-        public int COMPILER = 4;
 
         PluginEntry installNext = null;
 
@@ -737,7 +748,7 @@ public class PluginManager extends BasePlugin
             }
 
             installedVersion = "";
-            if (type == PLUGIN) {
+            if (type == PluginManager.PLUGIN) {
                 mainClass = (String)o.get("Main-Class");
                 name = mainClass.substring(mainClass.lastIndexOf(".")+1);
                 Plugin p = Base.plugins.get(mainClass);
@@ -746,7 +757,7 @@ public class PluginManager extends BasePlugin
                 }
             } 
 
-            if (type == CORE) {
+            if (type == PluginManager.CORE) {
                 name = (String)o.get("Core");
                 Core c = Base.cores.get(name);
                 if (c != null) {    
@@ -754,7 +765,7 @@ public class PluginManager extends BasePlugin
                 }
             }
 
-            if (type == BOARD) {
+            if (type == PluginManager.BOARD) {
                 name = (String)o.get("Board");
                 Board c = Base.boards.get(name);
                 if (c != null) {    
@@ -762,7 +773,7 @@ public class PluginManager extends BasePlugin
                 }
             }
 
-            if (type == COMPILER) {
+            if (type == PluginManager.COMPILER) {
                 name = (String)o.get("Compiler");
                 uecide.app.debug.Compiler c = Base.compilers.get(name);
                 if (c != null) {    
@@ -893,7 +904,7 @@ public class PluginManager extends BasePlugin
             button.setEnabled(false);
             if (command.equals("install") || command.equals("upgrade")) {
 
-                if (type == BOARD) {
+                if (type == PluginManager.BOARD) {
                     String recommendedCore = (String)data.get("Core");
                     if (recommendedCore != null) {
                         PluginEntry recommendedCoreObject = null;
@@ -918,7 +929,7 @@ public class PluginManager extends BasePlugin
                             }
                         }
                     }
-                } else if (type == CORE) {
+                } else if (type == PluginManager.CORE) {
                     String recommendedCompiler = (String)data.get("Compiler");
                     if (recommendedCompiler != null) {
                         PluginEntry recommendedCompilerObject = null;
@@ -953,7 +964,7 @@ public class PluginManager extends BasePlugin
         }
 
         public void uninstall() {
-            if (type == PLUGIN) {
+            if (type == PluginManager.PLUGIN) {
                 if (mainClass.equals(PluginManager.this.getClass().getName())) {
                     Base.showWarning(Translate.t("Unable To Uninstall"), Translate.w("If you uninstall the Plugin Manager you won't be able to install any new plugins. That would be a bit silly, don't you think? I'm not going to let you do it.", 40, "\n"), null);
                     return;
@@ -968,7 +979,7 @@ public class PluginManager extends BasePlugin
                 }
             }
 
-            if (type == BOARD) {
+            if (type == PluginManager.BOARD) {
                 Board b = Base.boards.get(name);
                 if (b != null) {
                     File bf = b.getFolder();
@@ -979,7 +990,7 @@ public class PluginManager extends BasePlugin
                 }
             }
 
-            if (type == CORE) {
+            if (type == PluginManager.CORE) {
                 Core c = Base.cores.get(name);
                 if (c != null) {
                     File cf = c.getFolder();
@@ -990,7 +1001,7 @@ public class PluginManager extends BasePlugin
                 }
             }
 
-            if (type == COMPILER) {
+            if (type == PluginManager.COMPILER) {
                 uecide.app.debug.Compiler c = Base.compilers.get(name);
                 if (c != null) {
                     File cf = c.getFolder();
@@ -1030,11 +1041,10 @@ public class PluginManager extends BasePlugin
             win.pack();
             bar = new JProgressBar(0, 100);
 
-//            if (type == CORE) {
+//            if (type == PluginManager.CORE) {
 //                if (Base.compilers.get((String)data.get("Compiler")) == null) {
 //                    PluginEntry pe = compilerObjects.get((String)data.get("Compiler"));
 //                    if (pe != null) {
-//                        isQueued = true;
 //                        pe.startDownload(this);
 //                        bar.setIndeterminate(false);
 //                        bar.setString("Installing Compiler...");
@@ -1086,7 +1096,6 @@ public class PluginManager extends BasePlugin
 
         public void download() {
 
-            isQueued = false;
             isDownloading = true;
 
             try {
@@ -1157,7 +1166,7 @@ public class PluginManager extends BasePlugin
             bar.setString("Installing");
             setProgress(0);
 
-            if (type == PLUGIN) {
+            if (type == PluginManager.PLUGIN) {
                 try {
                     Base.copyFile(dest, new File(Base.getUserPluginsFolder(), dest.getName()));
                     setProgress(100);
@@ -1169,7 +1178,7 @@ public class PluginManager extends BasePlugin
                 }
             }
 
-            if (type == CORE) {
+            if (type == PluginManager.CORE) {
                 if (isOutdated() || isInstalled()) {
                     uninstall();
                 }
@@ -1177,7 +1186,7 @@ public class PluginManager extends BasePlugin
                 installer.execute();
             }
 
-            if (type == BOARD) {
+            if (type == PluginManager.BOARD) {
                 if (isOutdated() || isInstalled()) {
                     uninstall();
                 }
@@ -1185,7 +1194,7 @@ public class PluginManager extends BasePlugin
                 installer.execute();
             }
 
-            if (type == COMPILER) {
+            if (type == PluginManager.COMPILER) {
                 if (isOutdated() || isInstalled()) {
                     uninstall();
                 }
@@ -1195,21 +1204,23 @@ public class PluginManager extends BasePlugin
             
         }
 
-        public void setInstalled() {
-            if (installNext != null) {
-                installNext.startDownload();
-                installNext = null;
-            }
-            isDownloading = false;
-            installedVersion = availableVersion;
+        public void setDownloading() {
+            isDownloading = true;
+
             updateDisplay();
             repaint();
             win.repaint();
             win.pack();
         }
 
-        public boolean isQueued() {
-            return isQueued;
+        public void setInstalled() {
+            isDownloading = false;
+            installedVersion = availableVersion;
+            updateDisplay();
+
+            repaint();
+            win.repaint();
+            win.pack();
         }
 
         public boolean isDownloading() {
