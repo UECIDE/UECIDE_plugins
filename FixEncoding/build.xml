@@ -45,7 +45,6 @@
                 <attribute name="Compiled" value="${TODAY}" />
                 <attribute name="Author" value="Majenko Technologies" />
                 <attribute name="Main-Class" value="uecide.plugin.${ant.project.name}"/>
-                <attribute name="Shortcut" value="-" />
             </manifest>
         </jar>
         <available file="src/uecide/plugin/${ant.project.name}" property="subdir.present" />

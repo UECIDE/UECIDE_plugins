@@ -47,6 +47,9 @@ public class PluginManager extends BasePlugin
     DefaultTreeModel treeModel;
     JTree tree;
     JPanel infoPanel;
+    JPanel downloadManager;
+    Box dlmBox;
+    
 
     public class PluginInfo {
         public String installed;
@@ -63,7 +66,14 @@ public class PluginManager extends BasePlugin
     {
         win = new JFrame(Translate.t("Plugin Manager"));
         win.getContentPane().setLayout(new BorderLayout());
-        win.setResizable(false);
+        win.setResizable(true);
+
+        downloadManager = new JPanel();
+        downloadManager.setLayout(new BorderLayout());
+        Border dlmSpace = BorderFactory.createEmptyBorder(10, 10, 10, 10);
+        dlmBox = Box.createVerticalBox();
+        dlmBox.setBorder(dlmSpace);
+        downloadManager.add(dlmBox);
 
         rootNode = new DefaultMutableTreeNode("UECIDE Plugins");
         treeModel = new DefaultTreeModel(rootNode);
@@ -143,19 +153,25 @@ public class PluginManager extends BasePlugin
 
 
         box.add(line);
+
+
+        Border dlBorder = BorderFactory.createLoweredBevelBorder();
+        downloadManager.setBorder(dlBorder);
+
+        box.add(downloadManager);
         
 
         win.getContentPane().add(box);
         win.pack();
 
-        Dimension size = new Dimension(500, 400); //win.getSize();
-        Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
-        win.setSize(size);
+        Dimension size = new Dimension(500, 500); //win.getSize();
+//        Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
+//        win.setSize(size);
         win.setMinimumSize(size);
-        win.setMaximumSize(size);
-        win.setPreferredSize(size);
-        win.setLocation((screen.width - size.width) / 2,
-                          (screen.height - size.height) / 2);
+//        win.setMaximumSize(size);
+//        win.setPreferredSize(size);
+//        win.setLocation((screen.width - size.width) / 2,
+//                          (screen.height - size.height) / 2);
 
         win.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
         win.addWindowListener(new WindowAdapter() {
@@ -720,12 +736,14 @@ public class PluginManager extends BasePlugin
 
     public class PluginEntry extends JPanel implements ActionListener {
         public String name;
-        public String installedVersion;
-        public String availableVersion;
+        public Version installedVersion;
+        public Version availableVersion;
         public String url;
         JButton button;
         JLabel label;
         JProgressBar bar;
+        JProgressBar dlmBar;
+        Box dlmEntry;
         public int type;
         File dest;
         public String mainClass;
@@ -739,49 +757,57 @@ public class PluginManager extends BasePlugin
         PluginEntry installNext = null;
 
         public PluginEntry(JSONObject o, int type) {
-            data = o;
-            this.type = type;
-            url = (String)o.get("url");
-            availableVersion = (String)o.get("Version");
-            if (availableVersion == null) {
-                availableVersion = "unknown";
-            }
-
-            installedVersion = "";
-            if (type == PluginManager.PLUGIN) {
-                mainClass = (String)o.get("Main-Class");
-                name = mainClass.substring(mainClass.lastIndexOf(".")+1);
-                Plugin p = Base.plugins.get(mainClass);
-                if (p != null) {
-                    installedVersion = p.getVersion();
+            try {
+                data = o;
+                this.type = type;
+                url = (String)o.get("url");
+                System.err.println(url);
+                System.err.println("Parsing available version...");
+                availableVersion = new Version((String)o.get("Version"));
+                if (availableVersion == null) {
+                    availableVersion = new Version(null);
                 }
-            } 
 
-            if (type == PluginManager.CORE) {
-                name = (String)o.get("Core");
-                Core c = Base.cores.get(name);
-                if (c != null) {    
-                    installedVersion = c.getFullVersion();
+                installedVersion = null;
+                System.err.println("Parsing installed version...");
+
+                if (type == PluginManager.PLUGIN) {
+                    mainClass = (String)o.get("Main-Class");
+                    name = mainClass.substring(mainClass.lastIndexOf(".")+1);
+                    Plugin p = Base.plugins.get(mainClass);
+                    if (p != null) {
+                        installedVersion = new Version(p.getVersion());
+                    }
+                } 
+
+                if (type == PluginManager.CORE) {
+                    name = (String)o.get("Core");
+                    Core c = Base.cores.get(name);
+                    if (c != null) {    
+                        installedVersion = new Version(c.getFullVersion());
+                    }
                 }
-            }
 
-            if (type == PluginManager.BOARD) {
-                name = (String)o.get("Board");
-                Board c = Base.boards.get(name);
-                if (c != null) {    
-                    installedVersion = c.getFullVersion();
+                if (type == PluginManager.BOARD) {
+                    name = (String)o.get("Board");
+                    Board c = Base.boards.get(name);
+                    if (c != null) {    
+                        installedVersion = new Version(c.getFullVersion());
+                    }
                 }
-            }
 
-            if (type == PluginManager.COMPILER) {
-                name = (String)o.get("Compiler");
-                uecide.app.debug.Compiler c = Base.compilers.get(name);
-                if (c != null) {    
-                    installedVersion = c.getFullVersion();
+                if (type == PluginManager.COMPILER) {
+                    name = (String)o.get("Compiler");
+                    uecide.app.debug.Compiler c = Base.compilers.get(name);
+                    if (c != null) {    
+                        installedVersion = new Version(c.getFullVersion());
+                    }
                 }
-            }
 
-            updateDisplay();
+                updateDisplay();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     
         public void updateDisplay() {
@@ -821,7 +847,7 @@ public class PluginManager extends BasePlugin
         }
         
         public boolean isNewer() {
-            if (installedVersion == "") {
+            if (installedVersion == null) {
                 return false;
             }
             if (installedVersion.compareTo(availableVersion) > 0) {
@@ -831,7 +857,7 @@ public class PluginManager extends BasePlugin
         }
 
         public boolean isOutdated() {
-            if (installedVersion == "") {
+            if (installedVersion == null) {
                 return false;
             }
             if (installedVersion.compareTo(availableVersion) < 0) {
@@ -841,7 +867,10 @@ public class PluginManager extends BasePlugin
         }
 
         public boolean isInstalled() {
-            if (installedVersion.equals(availableVersion)) {
+            if (installedVersion == null) {
+                return false;
+            }
+            if (installedVersion.compareTo(availableVersion) == 0) {
                 return true;
             }
             return false;
@@ -852,11 +881,14 @@ public class PluginManager extends BasePlugin
         }
 
         public String getAvailableVersion() {
-            return availableVersion;
+            return availableVersion.toString();
         }
 
         public String getInstalledVersion() {
-            return installedVersion;
+            if (installedVersion == null) {
+                return "";
+            }
+            return installedVersion.toString();
         }
 
         public String toString() {
@@ -974,7 +1006,7 @@ public class PluginManager extends BasePlugin
                     File jf = p.getJarFile();
                     if (jf.exists()) {
                         jf.delete();
-                        installedVersion = "";
+                        installedVersion = null;
                     }
                 }
             }
@@ -985,7 +1017,7 @@ public class PluginManager extends BasePlugin
                     File bf = b.getFolder();
                     if (bf.exists() && bf.isDirectory()) {
                         Base.removeDir(bf);
-                        installedVersion = "";
+                        installedVersion = null;
                     }
                 }
             }
@@ -996,7 +1028,7 @@ public class PluginManager extends BasePlugin
                     File cf = c.getFolder();
                     if (cf.exists() && cf.isDirectory()) {
                         Base.removeDir(cf);
-                        installedVersion = "";
+                        installedVersion = null;
                     }
                 }
             }
@@ -1007,7 +1039,7 @@ public class PluginManager extends BasePlugin
                     File cf = c.getFolder();
                     if (cf.exists() && cf.isDirectory()) {
                         Base.removeDir(cf);
-                        installedVersion = "";
+                        installedVersion = null;
                     }
                 }
             }
@@ -1036,10 +1068,22 @@ public class PluginManager extends BasePlugin
 
         public void startDownload() {
             this.removeAll();
+            bar = new JProgressBar(0, 100);
+            dlmBar = new JProgressBar(0, 100);
+            dlmBar.setSize(new Dimension(100, 20));
+            dlmBar.setPreferredSize(new Dimension(100, 20));
+            dlmBar.setMinimumSize(new Dimension(100, 20));
+            dlmBar.setMaximumSize(new Dimension(100, 20));
+            dlmEntry = Box.createHorizontalBox();
+            JLabel lab = new JLabel(getDisplayName());
+            dlmEntry.add(lab);
+            dlmEntry.add(Box.createHorizontalGlue());
+            dlmEntry.add(dlmBar);
+            dlmBox.add(dlmEntry);
             repaint();
             win.repaint();
             win.pack();
-            bar = new JProgressBar(0, 100);
+            
 
 //            if (type == PluginManager.CORE) {
 //                if (Base.compilers.get((String)data.get("Compiler")) == null) {
@@ -1061,8 +1105,11 @@ public class PluginManager extends BasePlugin
 //                }
 //            }
             bar.setString("Downloading");
+            dlmBar.setString("Downloading");
             bar.setStringPainted(true);
+            dlmBar.setStringPainted(true);
             bar.setIndeterminate(false);
+            dlmBar.setIndeterminate(false);
             this.add(bar);
             repaint();
             win.repaint();
@@ -1072,6 +1119,14 @@ public class PluginManager extends BasePlugin
         }
 
         public void setProgress(long p) {
+            if (dlmBar != null) {
+                if (p == -1) {
+                    dlmBar.setIndeterminate(true);
+                } else {
+                    dlmBar.setIndeterminate(false);
+                    dlmBar.setValue((int)p);
+                }
+            }
             if (bar != null) {
                 if (p == -1) {
                     bar.setIndeterminate(true);
@@ -1086,6 +1141,9 @@ public class PluginManager extends BasePlugin
         }
 
         public void setMax(long m) {
+            if (dlmBar != null) {
+                dlmBar.setMaximum((int)m);
+            }
             if (bar != null) {
                 bar.setMaximum((int)m);
             }
@@ -1164,6 +1222,7 @@ public class PluginManager extends BasePlugin
 
         public void install() {
             bar.setString("Installing");
+            dlmBar.setString("Installing");
             setProgress(0);
 
             if (type == PluginManager.PLUGIN) {
@@ -1217,6 +1276,8 @@ public class PluginManager extends BasePlugin
             isDownloading = false;
             installedVersion = availableVersion;
             updateDisplay();
+
+            dlmBox.remove(dlmEntry);
 
             repaint();
             win.repaint();
@@ -1315,6 +1376,93 @@ public class PluginManager extends BasePlugin
         protected void process(java.util.List<Integer> pct) {
             int p = pct.get(pct.size() - 1);
             pi.setProgress(p);
+        }
+    };
+
+    // A version string is a strange beast.  It's essentially a chain
+    // of mixed-base numbers separated by some other character.
+    // A mixed base number is a number where different characters within
+    // it reperesent values in different bases.  For example, the number
+    // "34b" has two base-10 numbers (3 and 4) and a base-26 number (b = 2).
+
+    public class Version implements Comparable,Cloneable {
+        public ArrayList<Integer> chunks;
+        public String versionString;
+
+        public Version(String data) {
+            try {
+                versionString = data;
+                chunks = new ArrayList<Integer>();
+                if (data != null) {
+                    // First, let's standardize any separators
+                    System.err.println("New version: " + data);
+                    data = data.replaceAll("-", ".");
+                    data = data.replaceAll("_", ".");
+                    data = data.replaceAll("pl", ".");
+                    data = data.replaceAll("rev", ".");
+                    System.err.println("Munged version: " + data);
+
+                    // Now let's split it into bits
+                    String[] parts = data.split("\\.");
+
+                    System.err.println(parts.length + " parts");
+                    System.err.print("Parsed: ");
+                    // And iterate through it all cleaning the data and converting it to numbers
+                    for (String part : parts) {
+                        int val = 0;
+                        System.err.print("[" + part + "=");
+                        char[] letters = part.toCharArray();
+                        for (char letter : letters) {
+                            if (letter >= '0' && letter <= '9') {
+                                val = val * 10;
+                                val += (letter - '0');
+                            } else if (letter >= 'a' && letter <= 'z') {
+                                val = val * 26;
+                                val += (letter - 'a');
+                            } else if (letter >= 'A' && letter <= 'Z') {
+                                val = val * 26;
+                                val += (letter - 'A');
+                            }
+                        }
+                        System.err.print(val + "] ");
+                        chunks.add(val);
+                    }
+                    System.err.println();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        public int compareTo(Object o) {
+            Version v = (Version)o;
+            int i = 0;
+            for (i = 0; i < chunks.size(); i++) {
+        
+                int targetValue = 0;
+                if (i < (v.chunks.size())) {
+                    targetValue = v.chunks.get(i);
+                }
+
+                if (chunks.get(i) < targetValue) {
+                    return -1;
+                }
+                if (chunks.get(i) > targetValue) {
+                    return 1;
+                }
+            }
+            return 0;
+        }
+
+        @Override
+        public Version clone() {
+            Version out = new Version(null);
+            out.chunks = new ArrayList<Integer>(chunks);
+            return out;
+        }
+    
+        public String toString() {
+            return versionString;
         }
     };
 
