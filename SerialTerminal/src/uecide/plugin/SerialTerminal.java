@@ -2,6 +2,7 @@ package uecide.plugin;
 
 import uecide.app.*;
 import uecide.app.debug.*;
+import uecide.app.editors.*;
 import java.io.*;
 import java.util.*;
 import java.net.*;
@@ -19,9 +20,15 @@ import jssc.*;
 import say.swing.*;
 
 
-public class SerialTerminal extends BasePlugin implements SerialPortEventListener,MessageConsumer
+public class SerialTerminal extends Plugin implements SerialPortEventListener,MessageConsumer
 {
-    JFrame win;
+    public static HashMap<String, String> pluginInfo = null;
+    public static URLClassLoader loader = null;
+    public static void setLoader(URLClassLoader l) { loader = l; }
+    public static void setInfo(HashMap<String, String>info) { pluginInfo = info; }
+    public static String getInfo(String item) { return pluginInfo.get(item); }
+
+    JFrame win = null;
     JTerminal term;
     SerialPort port;
     JComboBox baudRates;
@@ -30,11 +37,11 @@ public class SerialTerminal extends BasePlugin implements SerialPortEventListene
     JCheckBox lineEntry;
     JScrollBar scrollbackBar;
 
-    JTextField fontSizeField;
-    JTextField widthField;
-    JTextField heightField;
-    JCheckBox  autoCrIn;
-    JCheckBox  autoCrOut;
+    static JTextField fontSizeField;
+    static JTextField widthField;
+    static JTextField heightField;
+    static JCheckBox  autoCrIn;
+    static JCheckBox  autoCrOut;
 
     JTextField lineEntryBox;
     JComboBox lineEndings;
@@ -48,14 +55,17 @@ public class SerialTerminal extends BasePlugin implements SerialPortEventListene
 
     boolean ready = false;
 
-    public void init(Editor editor)
-    {
-        this.editor = editor;
-        this.serialPort = editor.getSerialPort();
-    }
+
+    public SerialTerminal(Editor e) { editor = e; }
+    public SerialTerminal(EditorBase e) { editorTab = e; }
+
 
     public void run()
     {
+        if (win != null) {
+            close();
+        }
+        serialPort = editor.getSerialPort();
         win = new JFrame(Translate.t("Serial Terminal"));
         win.getContentPane().setLayout(new BorderLayout());
         win.setResizable(false);
@@ -122,22 +132,25 @@ public class SerialTerminal extends BasePlugin implements SerialPortEventListene
                     Base.preferences.set("serial.debug_rate", value);
                     try {
                         if (port != null) {
-                            Serial.releasePort(port);
+                            if (port.isOpened()) {
+                                port.closePort();
+                            }
                             port = null;
                         }
                     } catch (Exception e) {
-                        editor.message("Unable to release port\n", 2);
+                        editor.error("Unable to release port");
                     }
                     try {
-                        port = Serial.requestPort(serialPort, mc, baudRate);
+                        port = Serial.requestPort(serialPort, baudRate);
                         if (port == null) {
-                            editor.message("Unable to reopen port\n");
+                            editor.error("Unable to reopen port");
                             return;
                         }
                         port.addEventListener(mc);
                         term.setDisconnected(false);
                     } catch (Exception e) {
-                        editor.message("Unable to reopen port: " + e.getMessage() + "\n", 2);
+                        editor.error("Unable to reopen port:");
+                        editor.error(e);
                     }
                 }
             }
@@ -232,15 +245,16 @@ public class SerialTerminal extends BasePlugin implements SerialPortEventListene
         try {
             baudRate = Base.preferences.getInteger("serial.debug_rate");
             baudRates.setSelectedItem(Base.preferences.get("serial.debug_rate"));
-            port = Serial.requestPort(serialPort, this, baudRate);
+            port = Serial.requestPort(serialPort, baudRate);
             if (port == null) {
-                editor.message("Unable to open serial port\n", 2);
+                editor.error("Unable to open serial port");
                 return;
             }
                 
             term.setDisconnected(false);
         } catch(Exception e) {
-            editor.message("Unable to open serial port: " + e.getMessage() + "\n", 2);
+            editor.error("Unable to open serial port:");
+            editor.error(e);
             return;
         }
         showCursor.setSelected(Base.preferences.getBoolean("serial.debug_cursor"));
@@ -257,18 +271,21 @@ public class SerialTerminal extends BasePlugin implements SerialPortEventListene
 
     public void close()
     {
-        Serial.releasePort(port);
-        win.dispose();
-        int p = Base.pluginInstances.indexOf(this);
-        if (p>=0) {
-            Base.pluginInstances.remove(p);
+        if (port != null) {
+            if (port.isOpened()) {
+                try {
+                    port.closePort();
+                } catch (Exception e) {
+                    editor.error(e);
+                }
+            }
+            port = null;
         }
+        win.dispose();
     }
 
-    public String getMenuTitle()
-    {
-        return(Translate.t("Serial Terminal"));
-    }
+    public void warning(String m) { editor.warning(m); }
+    public void error(String m) { editor.error(m); }
 
     public void message(String m) {
         if (port == null) {
@@ -289,16 +306,20 @@ public class SerialTerminal extends BasePlugin implements SerialPortEventListene
         }
     }
     
-    public void message(String m, int c) {
-        message(m);
+    public void addToolbarButtons(JToolBar toolbar, int flags) {
+        if (flags == Plugin.TOOLBAR_EDITOR) {
+            JButton b = new JButton(Base.loadIconFromResource("uecide/plugin/SerialTerminal/console.png", loader));
+            b.setToolTipText("Serial Terminal");
+            b.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    run();
+                }
+            });
+            toolbar.add(b);
+        }
     }
 
-    public ImageIcon toolbarIcon() {
-        ImageIcon icon = new ImageIcon(getResourceURL("uecide/plugin/SerialTerminal/console.png"));
-        return icon;
-    }
-
-    public void populatePreferences(JPanel p) {
+    public static void populatePreferences(JPanel p) {
         GridBagConstraints c = new GridBagConstraints();
         c.fill = GridBagConstraints.HORIZONTAL;
         c.gridwidth = 1;
@@ -326,7 +347,7 @@ public class SerialTerminal extends BasePlugin implements SerialPortEventListene
         final Container parent = p;
         selectSerialFont.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                JFontChooser fc = new JFontChooser(false);
+                JFontChooser fc = new JFontChooser();
                 fc.setSelectedFont(Base.preferences.stringToFont(fontSizeField.getText()));
                 int res = fc.showDialog(parent);
                 if (res == JFontChooser.OK_OPTION) {
@@ -390,7 +411,7 @@ public class SerialTerminal extends BasePlugin implements SerialPortEventListene
         p.add(autoCrOut, c);
     }
 
-    public void savePreferences() {
+    public static void savePreferences() {
         Base.preferences.set("serial.font", fontSizeField.getText());
         int w = 80;
         int h = 24;
@@ -402,7 +423,7 @@ public class SerialTerminal extends BasePlugin implements SerialPortEventListene
         try {
             h = Integer.parseInt(heightField.getText().trim());
         } catch (Exception e) {
-            h = 80;
+            h = 24;
         }
 
         Base.preferences.set("serial.width", Integer.toString(w));
@@ -413,36 +434,15 @@ public class SerialTerminal extends BasePlugin implements SerialPortEventListene
             
     }
 
-    public boolean releasePort(String portName) {
+    public void releasePort(String portName) {
         if (port == null) {
-            return false;
+            return;
         }
         if (portName == null) {
-            return false;
+            return;
         }
         if (portName.equals(serialPort)) {
-            if (!Serial.releasePort(port)) {
-                Base.error("Error releasing port!");
-                return false;
-            }
-            port = null;
-            term.setDisconnected(true);
-            win.repaint();
-            return true;
-        }
-        return false;
-    }
-
-    public void obtainPort(String portName) {
-        if (portName.equals(serialPort)) {
-            try {
-                port = Serial.requestPort(serialPort, this, baudRate);
-                port.addEventListener(this);
-                term.setDisconnected(false);
-                win.repaint();
-            } catch (Exception e) {
-                editor.message("Unable to reopen port: " + e.getMessage() + "\n", 2);
-            }
+            close();
         }
     }
 
@@ -451,9 +451,25 @@ public class SerialTerminal extends BasePlugin implements SerialPortEventListene
             try {
                 term.message(port.readString());
             } catch (Exception ex) {
-                Base.error(ex);
+                editor.error(ex);
             }
         }
+    }
+
+    public void populateMenu(JMenu menu, int flags) {
+        if (flags == (Plugin.MENU_TOOLS | Plugin.MENU_MID)) {
+            JMenuItem item = new JMenuItem("Serial Terminal");
+            item.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    run();
+                }
+            });
+            menu.add(item);
+        }
+    }
+
+    public static String getPreferencesTitle() {
+        return "Serial Terminal";
     }
 }
 

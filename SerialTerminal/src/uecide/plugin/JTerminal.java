@@ -306,8 +306,8 @@ public class JTerminal extends JComponent implements KeyListener,MouseListener,F
 
         graphic.setFont(font);
         graphic.setRenderingHint(
-            RenderingHints.KEY_TEXT_ANTIALIASING,
-            RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        RenderingHints.KEY_TEXT_ANTIALIASING,
+        RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
         boolean inSelect = false;
 
@@ -410,11 +410,6 @@ public class JTerminal extends JComponent implements KeyListener,MouseListener,F
     public void setAutoCr(boolean acr)
     {
         autoCr = acr;
-    }
-
-    public void message(String m, int c)
-    {
-        message(m);
     }
 
     boolean inEscapeSequence = false;
@@ -688,7 +683,7 @@ public class JTerminal extends JComponent implements KeyListener,MouseListener,F
 
     public void keyTyped(KeyEvent k) {
         if (keyPressConsumer != null) {
-            keyPressConsumer.message(Character.toString(k.getKeyChar()), 1);
+            keyPressConsumer.message(Character.toString(k.getKeyChar()));
         }
     }
 
@@ -715,9 +710,36 @@ public class JTerminal extends JComponent implements KeyListener,MouseListener,F
     }
 
     public void mouseClicked(MouseEvent e) {
+        if (e.getButton() == 3) {
+            JPopupMenu menu = new JPopupMenu();
+            JMenuItem item;
+
+            item = new JMenuItem("Copy");
+            item.setEnabled(selectStart != null && selectEnd != null);
+            item.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    copyContent();
+                    selectStart = null;
+                    selectEnd = null;
+                }
+            });
+            menu.add(item);
+
+            item = new JMenuItem("Paste");
+            item.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    pasteContent();
+                }
+            });
+            menu.add(item);
+
+            menu.show(this, e.getX(), e.getY());
+            return;
+        }
         requestFocusInWindow();
         selectStart = null;
         selectEnd = null;
+        repaint();
     }
 
     public void mouseEntered(MouseEvent e) {
@@ -727,24 +749,28 @@ public class JTerminal extends JComponent implements KeyListener,MouseListener,F
     }
 
     public void mouseReleased(MouseEvent e) {
-        copyContent();
-        selectStart = null;
-        selectEnd = null;
-        repaint();
+//        copyContent();
+//        selectStart = null;
+//        selectEnd = null;
+//        repaint();
     }
 
     public void mousePressed(MouseEvent e) {
-        selectStart = scrollbackAt(graphicToChar(e.getPoint()));
-        selectEnd = scrollbackAt(graphicToChar(e.getPoint()));
-        repaint();
+        if (e.getButton() == 1) {
+            selectStart = scrollbackAt(graphicToChar(e.getPoint()));
+            selectEnd = scrollbackAt(graphicToChar(e.getPoint()));
+            repaint();
+        }
     }
 
     public void mouseMoved(MouseEvent e) {
     }
 
     public void mouseDragged(MouseEvent e) {
-        selectEnd = scrollbackAt(graphicToChar(e.getPoint()));
-        repaint();
+        if (selectStart != null) {
+            selectEnd = scrollbackAt(graphicToChar(e.getPoint()));
+            repaint();
+        }
     }
 
     public void focusGained(FocusEvent e) {
@@ -782,6 +808,19 @@ public class JTerminal extends JComponent implements KeyListener,MouseListener,F
         selection.append(line.toString().replaceAll("\\s+$", ""));
 
         clipboard.setContents(new StringSelection(selection.toString()),null);
+    }
+
+    public void pasteContent() {
+        try {
+            Clipboard clipboard = getToolkit().getSystemClipboard();
+            String data = (String) clipboard.getData(DataFlavor.stringFlavor);
+            if (data != null) {
+                for (int i = 0; i < data.length(); i++) {
+                    keyPressConsumer.message(Character.toString(data.charAt(i)));
+                }
+            }
+        } catch (Exception e) {
+        }
     }
 
     public void setSize(Dimension d) {

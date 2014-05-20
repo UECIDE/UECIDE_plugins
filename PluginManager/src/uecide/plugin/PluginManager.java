@@ -2,6 +2,7 @@ package uecide.plugin;
 
 import uecide.app.*;
 import uecide.app.debug.*;
+import uecide.app.editors.*;
 import java.io.*;
 import java.util.*;
 import java.net.*;
@@ -18,8 +19,15 @@ import java.awt.event.*;
 import say.swing.*;
 import org.json.simple.*;
 
-public class PluginManager extends BasePlugin
+public class PluginManager extends Plugin
 {
+    public static HashMap<String, String> pluginInfo = null;
+    public static URLClassLoader loader = null;
+    public static void setLoader(URLClassLoader l) { loader = l; }
+    public static void setInfo(HashMap<String, String>info) { pluginInfo = info; }
+    public static String getInfo(String item) { return pluginInfo.get(item); }
+
+
     JFrame win;
     JButton refreshButton;
     JScrollPane scroll;
@@ -57,12 +65,7 @@ public class PluginManager extends BasePlugin
         public String url;
     }
 
-    public void init(Editor editor)
-    {
-        this.editor = editor;
-    }
-
-    public void run()
+    public void openMainWindow()
     {
         win = new JFrame(Translate.t("Plugin Manager"));
         win.getContentPane().setLayout(new BorderLayout());
@@ -447,12 +450,12 @@ public class PluginManager extends BasePlugin
         Icon newer;
 
         public PluginNodeRenderer() {
-            installed = new ImageIcon(getResourceURL("uecide/plugin/PluginManager/installed.png"));
-            available = new ImageIcon(getResourceURL("uecide/plugin/PluginManager/available.png"));
-            downloading = new ImageIcon(getResourceURL("uecide/plugin/PluginManager/downloading.png"));
-            queued = new ImageIcon(getResourceURL("uecide/plugin/PluginManager/queued.png"));
-            upgrade = new ImageIcon(getResourceURL("uecide/plugin/PluginManager/upgrade.png"));
-            newer = new ImageIcon(getResourceURL("uecide/plugin/PluginManager/newer.png"));
+            installed = Base.loadIconFromResource("uecide/plugin/PluginManager/installed.png", loader);
+            available = Base.loadIconFromResource("uecide/plugin/PluginManager/available.png", loader);
+            downloading = Base.loadIconFromResource("uecide/plugin/PluginManager/downloading.png", loader);
+            queued = Base.loadIconFromResource("uecide/plugin/PluginManager/queued.png", loader);
+            upgrade = Base.loadIconFromResource("uecide/plugin/PluginManager/upgrade.png", loader);
+            newer = Base.loadIconFromResource("uecide/plugin/PluginManager/newer.png", loader);
         }
         
         public Component getTreeCellRendererComponent(JTree tree, Object value, boolean selected, boolean expanded, boolean leaf, int row, boolean hasFocus) {
@@ -605,20 +608,11 @@ public class PluginManager extends BasePlugin
 
     }
 
-    public String getMenuTitle()
-    {
-        return(Translate.t("Plugin Manager"));
-    }
-
     public void message(String m) {
     }
     
     public void message(String m, int c) {
         message(m);
-    }
-
-    public ImageIcon toolbarIcon() {
-        return null;
     }
 
     public void updatePlugins() {
@@ -703,8 +697,16 @@ public class PluginManager extends BasePlugin
         }
     }
 
-    public int flags() {
-        return BasePlugin.MENU_PLUGIN_TOP;
+    public void populateMenu(JMenu menu, int flags) {
+        if (flags == (Plugin.MENU_TOOLS | Plugin.MENU_TOP)) {
+            JMenuItem item = new JMenuItem("Plugin Manager");
+            item.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    openMainWindow();
+                }
+            });
+            menu.add(item);
+        }
     }
 
     public void upgradeAll() {
@@ -761,23 +763,17 @@ public class PluginManager extends BasePlugin
                 data = o;
                 this.type = type;
                 url = (String)o.get("url");
-                System.err.println(url);
-                System.err.println("Parsing available version...");
                 availableVersion = new Version((String)o.get("Version"));
                 if (availableVersion == null) {
                     availableVersion = new Version(null);
                 }
 
                 installedVersion = null;
-                System.err.println("Parsing installed version...");
 
                 if (type == PluginManager.PLUGIN) {
                     mainClass = (String)o.get("Main-Class");
                     name = mainClass.substring(mainClass.lastIndexOf(".")+1);
-                    Plugin p = Base.plugins.get(mainClass);
-                    if (p != null) {
-                        installedVersion = new Version(p.getVersion());
-                    }
+                    installedVersion = Base.getPluginVersion(mainClass);
                 } 
 
                 if (type == PluginManager.CORE) {
@@ -1001,13 +997,10 @@ public class PluginManager extends BasePlugin
                     Base.showWarning(Translate.t("Unable To Uninstall"), Translate.w("If you uninstall the Plugin Manager you won't be able to install any new plugins. That would be a bit silly, don't you think? I'm not going to let you do it.", 40, "\n"), null);
                     return;
                 }
-                Plugin p = Base.plugins.get(mainClass);
-                if (p != null) {
-                    File jf = p.getJarFile();
-                    if (jf.exists()) {
-                        jf.delete();
-                        installedVersion = null;
-                    }
+                File jf = new File(Base.getPluginInfo(mainClass, "jarfile"));
+                if (jf.exists()) {
+                    jf.delete();
+                    installedVersion = null;
                 }
             }
 
@@ -1049,12 +1042,7 @@ public class PluginManager extends BasePlugin
             Base.loadBoards();
             Base.gatherLibraries();
             for (Editor e : Base.editors) {
-                e.rebuildCoresMenu();
-                e.rebuildCompilersMenu();
-                e.rebuildBoardsMenu();
-                e.rebuildImportMenu();
-                e.rebuildExamplesMenu();
-                e.rebuildPluginsMenu();
+                e.updateAll();
             }
 
             updateDisplay();
@@ -1162,11 +1150,6 @@ public class PluginManager extends BasePlugin
                 URL page = new URL(url);
                 HttpURLConnection httpConn = (HttpURLConnection) page.openConnection();
                 final long contentLength = httpConn.getContentLength();
-                if (contentLength == -1) {
-                    System.out.println("unknown content length");
-                } else {
-                    System.out.println("content length: " + contentLength + " bytes");              
-                }
                 final InputStream in = httpConn.getInputStream();
                 final BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(dest));
 
@@ -1315,7 +1298,6 @@ public class PluginManager extends BasePlugin
             int files = Base.countZipEntries(inputFile);
             pi.setMax((long)files);
             if (files == -1) {
-                System.err.println("Zip file empty");
                 Base.showWarning(Translate.t("Install Failed"), Translate.w("The install failed: The jar file has no entries.", 40, "\n"), null);
                 return null;
             }
@@ -1363,11 +1345,7 @@ public class PluginManager extends BasePlugin
             Base.loadBoards();
             Base.gatherLibraries();
             for (Editor e : Base.editors) {
-                e.rebuildCoresMenu();
-                e.rebuildBoardsMenu();
-                e.rebuildImportMenu();
-                e.rebuildExamplesMenu();
-                e.rebuildPluginsMenu();
+                e.updateAll();
             }
             pi.setInstalled();
         }
@@ -1379,92 +1357,24 @@ public class PluginManager extends BasePlugin
         }
     };
 
-    // A version string is a strange beast.  It's essentially a chain
-    // of mixed-base numbers separated by some other character.
-    // A mixed base number is a number where different characters within
-    // it reperesent values in different bases.  For example, the number
-    // "34b" has two base-10 numbers (3 and 4) and a base-26 number (b = 2).
+    public JButton getToolbarButton(int flags, String x) {
+        return null;
+    }
 
-    public class Version implements Comparable,Cloneable {
-        public ArrayList<Integer> chunks;
-        public String versionString;
-
-        public Version(String data) {
-            try {
-                versionString = data;
-                chunks = new ArrayList<Integer>();
-                if (data != null) {
-                    // First, let's standardize any separators
-                    System.err.println("New version: " + data);
-                    data = data.replaceAll("-", ".");
-                    data = data.replaceAll("_", ".");
-                    data = data.replaceAll("pl", ".");
-                    data = data.replaceAll("rev", ".");
-                    System.err.println("Munged version: " + data);
-
-                    // Now let's split it into bits
-                    String[] parts = data.split("\\.");
-
-                    System.err.println(parts.length + " parts");
-                    System.err.print("Parsed: ");
-                    // And iterate through it all cleaning the data and converting it to numbers
-                    for (String part : parts) {
-                        int val = 0;
-                        System.err.print("[" + part + "=");
-                        char[] letters = part.toCharArray();
-                        for (char letter : letters) {
-                            if (letter >= '0' && letter <= '9') {
-                                val = val * 10;
-                                val += (letter - '0');
-                            } else if (letter >= 'a' && letter <= 'z') {
-                                val = val * 26;
-                                val += (letter - 'a');
-                            } else if (letter >= 'A' && letter <= 'Z') {
-                                val = val * 26;
-                                val += (letter - 'A');
-                            }
-                        }
-                        System.err.print(val + "] ");
-                        chunks.add(val);
-                    }
-                    System.err.println();
+    public void addToolbarButtons(JToolBar tb, int flags) {
+        if (flags == Plugin.TOOLBAR_EDITOR) {
+            JButton b = new JButton(Base.loadIconFromResource("uecide/plugin/PluginManager/newer.png", loader));
+            b.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    openMainWindow();
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            });
+            tb.add(b);
         }
+    }
 
-        public int compareTo(Object o) {
-            Version v = (Version)o;
-            int i = 0;
-            for (i = 0; i < chunks.size(); i++) {
-        
-                int targetValue = 0;
-                if (i < (v.chunks.size())) {
-                    targetValue = v.chunks.get(i);
-                }
 
-                if (chunks.get(i) < targetValue) {
-                    return -1;
-                }
-                if (chunks.get(i) > targetValue) {
-                    return 1;
-                }
-            }
-            return 0;
-        }
-
-        @Override
-        public Version clone() {
-            Version out = new Version(null);
-            out.chunks = new ArrayList<Integer>(chunks);
-            return out;
-        }
-    
-        public String toString() {
-            return versionString;
-        }
-    };
-
+    public PluginManager(Editor e) { editor = e; }
+    public PluginManager(EditorBase e) { editorTab = e; }
 }
 

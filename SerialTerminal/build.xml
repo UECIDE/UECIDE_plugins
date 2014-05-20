@@ -2,6 +2,25 @@
 <project name="SerialTerminal" default="build">
 
     <property file="../build.settings"/>
+    <condition property="bootclass.path" value="/usr/lib/jvm/java-6-openjdk-i386/jre/lib/rt.jar">
+        <and>
+            <os family="unix"/>
+            <not>
+                <os family="mac"/>
+            </not>
+            <os arch="i386"/>
+        </and>
+    </condition>
+    <condition property="bootclass.path" value="/usr/lib/jvm/java-6-openjdk-amd64/jre/lib/rt.jar">
+        <and>
+            <os family="unix"/>
+            <not>
+                <os family="mac"/>
+            </not>
+            <os arch="amd64"/>
+        </and>
+    </condition>
+
     <property file="build.settings"/>
 
     <tstamp>
@@ -35,25 +54,22 @@
 	        destdir="bin" 
             bootclasspath="${bootclass.path}"
 	        includeAntRuntime="false"
-	        classpath="${uecide.path}/core/uecide.jar; ${env.JAVA_HOME}/lib/tools.jar; ../lib/apple.jar; ../lib/jna.jar; ../lib/jssc.jar" />
+	        classpath="${uecide.path}/uecide.jar; ${env.JAVA_HOME}/lib/tools.jar" />
     </target>
 
     <target name="build" depends="compile" description="Build the plugin jars">
-        <jar basedir="bin" destfile="${ant.project.name}.jar">
+        <jar destfile="${ant.project.name}.jar">
+            <fileset dir="bin" />
+            <fileset dir="resources" />
             <manifest>
                 <attribute name="Version" value="${version}" />
+                <attribute name="Minimum-Version" value="0.8.6a" />
                 <attribute name="Compiled" value="${TODAY}" />
                 <attribute name="Author" value="Majenko Technologies" />
                 <attribute name="Main-Class" value="uecide.plugin.${ant.project.name}"/>
                 <attribute name="Shortcut" value="M" />
             </manifest>
         </jar>
-        <available file="src/uecide/plugin/${ant.project.name}" property="subdir.present" />
-        <antcall target="build.subdir" />
-    </target>
-
-    <target name="build.subdir" if="subdir.present">
-        <jar basedir="src" destfile="${ant.project.name}.jar" includes="uecide/plugin/${ant.project.name}/**" update="true"/>
     </target>
 
     <target name="install" depends="build">
