@@ -1376,5 +1376,9 @@ public class PluginManager extends Plugin
 
     public PluginManager(Editor e) { editor = e; }
     public PluginManager(EditorBase e) { editorTab = e; }
+
+    public void launch() {
+        openMainWindow();
+    }
 }
 
