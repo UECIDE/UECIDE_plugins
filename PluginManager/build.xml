@@ -52,9 +52,14 @@
             source="1.6"
             target="1.6"
 	        destdir="bin" 
+                debug="true"
+                debuglevel="lines,vars,source"
+                deprecation="true"
             bootclasspath="${bootclass.path}"
 	        includeAntRuntime="false"
-            classpath="${uecide.path}/uecide.jar; ${env.JAVA_HOME}/lib/tools.jar" />
+            classpath="${uecide.path}/uecide.jar; ${env.JAVA_HOME}/lib/tools.jar">
+            <compilerarg value="-Xlint:unchecked"/>
+        </javac>
     </target>
 
     <target name="build" depends="compile" description="Build the plugin jars">
@@ -74,5 +79,15 @@
 
     <target name="install" depends="build">
         <copy file="${ant.project.name}.jar" todir="${install.path}" />
+    </target>
+
+    <target name="bundle" depends="build">
+        <copy file="${ant.project.name}.jar" todir="../../UECIDE/resources/uecide/app/bundles/plugins/" />
+    </target>
+
+    <target name="test" depends="install">
+        <exec executable="${uecide.path}/uecide.jar">
+            <arg value="--exceptions" />
+        </exec>
     </target>
 </project>
