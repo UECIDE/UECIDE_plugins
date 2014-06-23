@@ -175,6 +175,7 @@ public class Grapher extends BasePlugin implements SerialPortEventListener
 
     public void close()
     {
+        ready = false;
         Serial.releasePort(port);
         win.dispose();
         ready = false;

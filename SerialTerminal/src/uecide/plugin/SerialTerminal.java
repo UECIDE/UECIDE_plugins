@@ -257,6 +257,7 @@ public class SerialTerminal extends BasePlugin implements SerialPortEventListene
 
     public void close()
     {
+        ready = false;
         Serial.releasePort(port);
         win.dispose();
         int p = Base.pluginInstances.indexOf(this);
