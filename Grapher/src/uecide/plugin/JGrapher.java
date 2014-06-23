@@ -180,12 +180,12 @@ public class JGrapher extends JComponent
 
         return offscreen;
     }
-
+/*
     public Dimension getPreferredSize() { return screenSize; }
 
     public Dimension getMinimumSize() { return screenSize; }
     public Dimension getMaximumSize() { return screenSize; }
-
+*/
     public void setFont(Font f) {
         font = f;
         repaint();
@@ -249,11 +249,11 @@ public class JGrapher extends JComponent
         screenSize = d;
         numPoints = screenSize.width - leftMargin - rightMargin;
         recreateDataStore();
+        setSize(d);
+        setMinimumSize(d);
+        setMaximumSize(d);
+        setPreferredSize(d);
         repaint();
-        Container parent = this.getParent();
-        if (parent != null) {
-            parent.repaint();
-        }
     } 
 
     public void recreateDataStore() {

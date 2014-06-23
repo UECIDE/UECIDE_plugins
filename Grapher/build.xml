@@ -20,6 +20,7 @@
             <os arch="amd64"/>
         </and>
     </condition>
+
     <property file="build.settings"/>
 
     <tstamp>
@@ -51,30 +52,42 @@
             source="1.6"
             target="1.6"
 	        destdir="bin" 
+                debug="true"
+                debuglevel="lines,vars,source"
+                deprecation="true"
             bootclasspath="${bootclass.path}"
 	        includeAntRuntime="false"
-            classpath="${uecide.path}/core/uecide.jar; ${env.JAVA_HOME}/lib/tools.jar; ../lib/apple.jar; ../lib/jna.jar; ../lib/jssc.jar" />
+            classpath="${uecide.path}/uecide.jar; ${env.JAVA_HOME}/lib/tools.jar">
+            <compilerarg value="-Xlint:unchecked"/>
+        </javac>
     </target>
 
     <target name="build" depends="compile" description="Build the plugin jars">
-        <jar basedir="bin" destfile="${ant.project.name}.jar">
+        <jar destfile="${ant.project.name}.jar">
+            <fileset dir="bin" />
+            <fileset dir="resources" />
             <manifest>
                 <attribute name="Version" value="${version}" />
+                <attribute name="Minimum-Version" value="0.8.6a" />
                 <attribute name="Compiled" value="${TODAY}" />
                 <attribute name="Author" value="Majenko Technologies" />
                 <attribute name="Main-Class" value="uecide.plugin.${ant.project.name}"/>
-                <attribute name="Shortcut" value="G" />
+                <attribute name="Shortcut" value="-" />
             </manifest>
         </jar>
-        <available file="src/uecide/plugin/${ant.project.name}" property="subdir.present" />
-        <antcall target="build.subdir" />
-    </target>
-
-    <target name="build.subdir" if="subdir.present">
-        <jar basedir="src" destfile="${ant.project.name}.jar" includes="uecide/plugin/${ant.project.name}/**" update="true"/>
     </target>
 
     <target name="install" depends="build">
         <copy file="${ant.project.name}.jar" todir="${install.path}" />
+    </target>
+
+    <target name="bundle" depends="build">
+        <copy file="${ant.project.name}.jar" todir="../../UECIDE/resources/uecide/app/bundles/plugins/" />
+    </target>
+
+    <target name="test" depends="install">
+        <exec executable="${uecide.path}/uecide.jar">
+            <arg value="--exceptions" />
+        </exec>
     </target>
 </project>

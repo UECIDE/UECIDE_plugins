@@ -1,6 +1,7 @@
 package uecide.plugin;
 
 import uecide.app.*;
+import uecide.app.editors.*;
 import uecide.app.debug.*;
 import java.io.*;
 import java.util.*;
@@ -18,8 +19,16 @@ import say.swing.*;
 import jssc.*;
 
 
-public class Grapher extends BasePlugin implements SerialPortEventListener
+public class Grapher extends Plugin implements SerialPortEventListener
 {
+    public static HashMap<String, String> pluginInfo = null;
+    public static URLClassLoader loader = null;
+    public static void setLoader(URLClassLoader l) { loader = l; }
+    public static void setInfo(HashMap<String, String>info) { pluginInfo = info; }
+    public static String getInfo(String item) { return pluginInfo.get(item); }
+    public Grapher(Editor e) { editor = e; }
+    public Grapher(EditorBase e) { editorTab = e; }
+
     JFrame win;
     JGrapher graph;
     SerialPort port;
@@ -33,35 +42,29 @@ public class Grapher extends BasePlugin implements SerialPortEventListener
     String serialPort;
     JToolBar toolbar;
 
-    JTextField fontSizeField;
-    Box box;
-    Box line;
+    static JTextField fontSizeField;
+    JPanel line;
+    JPanel panel;
+    JPanel graphPanel;
 
     int baudRate;
 
     boolean ready = false;
 
-
-    public void init(Editor editor)
+    public void openMainWindow()
     {
-        this.editor = editor;
         serialPort = editor.getSerialPort();
-    }
-
-    public void run()
-    {
         win = new JFrame(Translate.t("Grapher"));
-        win.getContentPane().setLayout(new BorderLayout());
         win.setResizable(false);
+        JPanel panel = new JPanel();
+        win.add(panel);
 
-        box = Box.createVerticalBox();
+        panel.setLayout(new BorderLayout());
 
         toolbar = new JToolBar();
         toolbar.setFloatable(false);
 
-        File themeFolder = Base.getContentFile("lib/theme");
-        File iconFile = new File(themeFolder, "save.png");
-        ImageIcon saveIcon = new ImageIcon(iconFile.getAbsolutePath());
+        ImageIcon saveIcon = Base.loadIconFromResource("toolbar/save.png");
         JButton saveButton = new JButton(saveIcon);
         saveButton.setToolTipText(Translate.t("Save Image"));
 
@@ -72,8 +75,8 @@ public class Grapher extends BasePlugin implements SerialPortEventListener
         });
         toolbar.add(saveButton);
 
-        playIcon = new ImageIcon(getResourceURL("uecide/plugin/Grapher/play.png"));
-        pauseIcon = new ImageIcon(getResourceURL("uecide/plugin/Grapher/pause.png"));
+        playIcon = Base.loadIconFromResource("uecide/plugin/Grapher/play.png", loader);
+        pauseIcon = Base.loadIconFromResource("uecide/plugin/Grapher/pause.png", loader);
         playPauseButton = new JButton(pauseIcon);
         playPauseButton.setToolTipText(Translate.t("Pause Graph"));
         playPauseButton.addActionListener(new ActionListener() {
@@ -83,9 +86,7 @@ public class Grapher extends BasePlugin implements SerialPortEventListener
         });
         playPauseState = false;
         toolbar.add(playPauseButton);
-        box.add(toolbar);
-
-//        line = Box.createHorizontalBox();
+        panel.add(toolbar, BorderLayout.NORTH);
 
         graph = new JGrapher();
         Font f = Base.preferences.getFont("grapher.font");
@@ -95,16 +96,17 @@ public class Grapher extends BasePlugin implements SerialPortEventListener
         }
         graph.setFont(f);
 
-//        line.add(graph);
-        box.add(graph);
+        graphPanel = new JPanel();
+        graphPanel.setLayout(new BorderLayout());
+        graphPanel.add(graph, BorderLayout.CENTER);
+        panel.add(graphPanel, BorderLayout.CENTER);
         
-        line = Box.createHorizontalBox();
-
-        line.add(Box.createHorizontalGlue());
+        JPanel line = new JPanel();
+        line.setLayout(new BoxLayout(line, BoxLayout.LINE_AXIS));
 
         JLabel label = new JLabel(Translate.t("Baud Rate") + ": ");
         line.add(label);
-        String[] baudRateList = new String[] { "300", "1200", "2400", "4800", "9600", "14400", "28800", "38400", "57600", "115200", "230400", "460800", "500000", "576000", "1000000", "1152000"};
+        String[] baudRateList = new String[] { "300", "1200", "2400", "4800", "9600", "14400", "19200", "28800", "38400", "57600", "115200", "230400", "460800", "500000", "576000", "1000000", "1152000"};
         baudRates = new JComboBox(baudRateList);
         final SerialPortEventListener mc = this;
         baudRates.addActionListener(new ActionListener() {
@@ -115,14 +117,15 @@ public class Grapher extends BasePlugin implements SerialPortEventListener
                     Base.preferences.set("serial.debug_rate", value);
                     try {
                         if (port != null) {
-                            Serial.releasePort(port);
+                            port.removeEventListener();
+                            Serial.closePort(port);
                             port = null;
                         }
                     } catch (Exception e) {
                         editor.message("Unable to release port: " + e.getMessage() + "\n", 2);
                     }
                     try {
-                        port = Serial.requestPort(serialPort, mc, baudRate);
+                        port = Serial.requestPort(serialPort, baudRate);
                         if (port == null) {
                             editor.message("Unable to reopen port\n", 2);
                         } else {
@@ -137,9 +140,8 @@ public class Grapher extends BasePlugin implements SerialPortEventListener
 
         line.add(baudRates);
 
-        box.add(line);
+        panel.add(line, BorderLayout.SOUTH);
 
-        win.getContentPane().add(box);
         win.pack();
 
         Dimension size = win.getSize();
@@ -158,13 +160,15 @@ public class Grapher extends BasePlugin implements SerialPortEventListener
         try {
             baudRate = Base.preferences.getInteger("serial.debug_rate");
             baudRates.setSelectedItem(Base.preferences.get("serial.debug_rate"));
-            port = Serial.requestPort(serialPort, this, baudRate); 
+            port = Serial.requestPort(serialPort, baudRate); 
+            port.addEventListener(mc);
         } catch(Exception e) {
             editor.message("Unable to open serial port: " + e.getMessage() + "\n", 2);
             win.dispose();
             return;
         }
         try {
+            port.removeEventListener();
             port.addEventListener(this);
         } catch (Exception e) {
             Base.error(e);
@@ -175,18 +179,30 @@ public class Grapher extends BasePlugin implements SerialPortEventListener
 
     public void close()
     {
-        Serial.releasePort(port);
+        ready = false;
+        try {
+            if (port != null) {
+                port.removeEventListener();
+                Serial.closePort(port);
+            }
+        } catch (Exception e) {
+            editor.error(e);
+        }
+        port = null;
         win.dispose();
         ready = false;
-        int p = Base.pluginInstances.indexOf(this);
-        if (p>=0) {
-            Base.pluginInstances.remove(p);
-        }
     }
 
-    public String getMenuTitle()
-    {
-        return(Translate.t("Grapher"));
+    public void populateMenu(JMenu menu, int flags) {
+        if (flags == (Plugin.MENU_TOOLS | Plugin.MENU_MID)) {
+            JMenuItem item = new JMenuItem("Grapher");
+            item.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    openMainWindow();
+                }
+            });
+            menu.add(item);
+        }
     }
 
     char command = 0;
@@ -230,6 +246,10 @@ public class Grapher extends BasePlugin implements SerialPortEventListener
                     break;
                 case 'S':
                     if (params.length == 2) {
+                        graphPanel.setSize(new Dimension(
+                            Integer.parseInt(params[0]),
+                            Integer.parseInt(params[1])
+                        ));
                         graph.setScreenSize(new Dimension(
                             Integer.parseInt(params[0]),
                             Integer.parseInt(params[1])
@@ -288,18 +308,21 @@ public class Grapher extends BasePlugin implements SerialPortEventListener
         }
     }
     
-    public ImageIcon toolbarIcon() {
-        ImageIcon icon = new ImageIcon(getResourceURL("uecide/plugin/Grapher/grapher.png"));
-        return icon;
+    public void addToolbarButtons(JToolBar tb, int flags) {
+        if (flags == Plugin.TOOLBAR_EDITOR) {
+            ImageIcon icon = Base.loadIconFromResource("uecide/plugin/Grapher/grapher.png", loader);
+            JButton btn = new JButton(icon);
+            btn.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    openMainWindow();
+                }
+            });
+            tb.add(btn);
+        }
     }
 
     public void resizeWindow() {
-//        win.setPreferredSize(win.getPreferredSize());
-//        win.validate();
-        box.invalidate();
-        box.validate();
         win.pack();
-//        win.repaint();
     }
 
     public void saveImage() {
@@ -335,7 +358,7 @@ public class Grapher extends BasePlugin implements SerialPortEventListener
         }
     }
 
-    public void populatePreferences(JPanel p) {
+    public static void populatePreferences(JPanel p) {
         GridBagConstraints c = new GridBagConstraints();
 
         c.fill = GridBagConstraints.HORIZONTAL;
@@ -364,7 +387,7 @@ public class Grapher extends BasePlugin implements SerialPortEventListener
         final Container parent = p;
         selectSerialFont.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                JFontChooser fc = new JFontChooser(false);
+                JFontChooser fc = new JFontChooser();
                 fc.setSelectedFont(grapherFont);
                 int res = fc.showDialog(parent);
                 if (res == JFontChooser.OK_OPTION) {
@@ -377,37 +400,28 @@ public class Grapher extends BasePlugin implements SerialPortEventListener
         fontSizeField.setText(Base.preferences.get("grapher.font"));
     }
 
-    public void savePreferences() {
+    public static void savePreferences() {
         Base.preferences.set("grapher.font", fontSizeField.getText());
     }
 
-    public boolean releasePort(String portName) {
-        if (portName == null) {
-            return true;
-        }
-        if (port == null) {
-            return true;
+    public void releasePort(String portName) {
+        if (portName == null || serialPort == null) {
+            return;
         }
         if (portName.equals(serialPort)) {
-            try {
-                port.removeEventListener();
-            } catch (Exception e) {
-                Base.error(e);
-            }
-            boolean rok = Serial.releasePort(port);
-            port = null;
-            return rok;
+            WindowEvent windowClosing = new WindowEvent(win, WindowEvent.WINDOW_CLOSING);
+            win.dispatchEvent(windowClosing);
         }
-        return false;
     }
 
     public void obtainPort(String portName) {
         if (portName.equals(serialPort)) {
             try {
-                port = Serial.requestPort(serialPort, this, baudRate);
+                port = Serial.requestPort(serialPort, baudRate);
                 port.addEventListener(this);
             } catch (Exception e) {
-                editor.message("Unable to reopen port: " + e.getMessage() + "\n", 2);
+                editor.error("Unable to reopen port: ");
+                editor.error(e);
             }
         }
     }

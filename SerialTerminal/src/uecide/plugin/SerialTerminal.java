@@ -66,6 +66,8 @@ public class SerialTerminal extends Plugin implements SerialPortEventListener,Me
             close();
         }
         serialPort = editor.getSerialPort();
+
+        Debug.message(this + ": Opening serial terminal on port " + serialPort);
         win = new JFrame(Translate.t("Serial Terminal"));
         win.getContentPane().setLayout(new BorderLayout());
         win.setResizable(false);
@@ -122,7 +124,7 @@ public class SerialTerminal extends Plugin implements SerialPortEventListener,Me
 
         JLabel label = new JLabel(Translate.t("Baud Rate") + ": ");
         line.add(label);
-        baudRates = new JComboBox(new String[] { "300", "1200", "2400", "4800", "9600", "14400", "28800", "38400", "57600", "115200", "230400", "460800", "500000", "576000", "1000000", "1152000"});
+        baudRates = new JComboBox(new String[] { "300", "1200", "2400", "4800", "9600", "14400", "19200", "28800", "38400", "57600", "115200", "230400", "460800", "500000", "576000", "1000000", "1152000"});
         final SerialPortEventListener mc = this;
         baudRates.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent event) {
@@ -133,7 +135,7 @@ public class SerialTerminal extends Plugin implements SerialPortEventListener,Me
                     try {
                         if (port != null) {
                             if (port.isOpened()) {
-                                port.closePort();
+                                Serial.closePort(port);
                             }
                             port = null;
                         }
@@ -141,6 +143,7 @@ public class SerialTerminal extends Plugin implements SerialPortEventListener,Me
                         editor.error("Unable to release port");
                     }
                     try {
+                        Debug.message(this + ": Change baud rate " + serialPort);
                         port = Serial.requestPort(serialPort, baudRate);
                         if (port == null) {
                             editor.error("Unable to reopen port");
@@ -245,6 +248,7 @@ public class SerialTerminal extends Plugin implements SerialPortEventListener,Me
         try {
             baudRate = Base.preferences.getInteger("serial.debug_rate");
             baudRates.setSelectedItem(Base.preferences.get("serial.debug_rate"));
+            Debug.message(this + ": Open port " + serialPort);
             port = Serial.requestPort(serialPort, baudRate);
             if (port == null) {
                 editor.error("Unable to open serial port");
@@ -271,10 +275,14 @@ public class SerialTerminal extends Plugin implements SerialPortEventListener,Me
 
     public void close()
     {
+        ready = false;
+        for( ActionListener al : baudRates.getActionListeners() ) {
+            baudRates.removeActionListener( al );
+        }
         if (port != null) {
             if (port.isOpened()) {
                 try {
-                    port.closePort();
+                    Serial.closePort(port);
                 } catch (Exception e) {
                     editor.error(e);
                 }
@@ -282,6 +290,7 @@ public class SerialTerminal extends Plugin implements SerialPortEventListener,Me
             port = null;
         }
         win.dispose();
+        Debug.message(this + ": Closing serial terminal on port " + serialPort);
     }
 
     public void warning(String m) { editor.warning(m); }

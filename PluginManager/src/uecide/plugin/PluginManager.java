@@ -701,6 +701,7 @@ public class PluginManager extends Plugin implements PropertyChangeListener
                                 par.mkdirs();
                             }
                             Base.copyFile(f, out);
+                            out.setExecutable(true, false);
                         }
                         
                         fc++;
